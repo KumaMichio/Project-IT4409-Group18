@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS courses (
   id              BIGSERIAL PRIMARY KEY,
   instructor_id   BIGINT NOT NULL REFERENCES users(id),
   title           TEXT NOT NULL,
-  slug            TEXT UNIQUE NOT NULL,
+  slug            TEXT UNIQUE NOT NULL,  -- tạo URL
   description     TEXT,
   price_cents     INTEGER NOT NULL DEFAULT 0,
   currency        TEXT NOT NULL DEFAULT 'VND',
@@ -182,10 +182,10 @@ CREATE TABLE IF NOT EXISTS lessons (
   title       TEXT NOT NULL,
   position    INTEGER NOT NULL,
   duration_s  INTEGER,          -- tổng thời lượng video (nếu có)
-  requires_quiz_pass BOOLEAN NOT NULL DEFAULT FALSE,
+  requires_quiz_pass BOOLEAN NOT NULL DEFAULT FALSE, -- có yêu cầu qua quiz mới mở khoá
   UNIQUE(module_id, position)
 );
-
+-- bảng lesson_assets để lưu trữ video, tài liệu, link,...
 CREATE TABLE IF NOT EXISTS lesson_assets (
   id          BIGSERIAL PRIMARY KEY,
   lesson_id   BIGINT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
@@ -212,7 +212,7 @@ CREATE TABLE IF NOT EXISTS payments (
   id                BIGSERIAL PRIMARY KEY,
   enrollment_id     BIGINT NOT NULL REFERENCES enrollments(id) ON DELETE CASCADE,
   provider          payment_provider NOT NULL,
-  provider_txn_id   TEXT,
+  provider_txn_id   TEXT, -- ID giao dịch từ nhà cung cấp
   amount_cents      INTEGER NOT NULL,
   currency          TEXT NOT NULL DEFAULT 'VND',
   status            payment_status NOT NULL,
@@ -229,7 +229,7 @@ CREATE INDEX IF NOT EXISTS idx_payments_enroll ON payments(enrollment_id);
 CREATE TABLE IF NOT EXISTS student_lesson_progress (
   student_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   lesson_id     BIGINT NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
-  watched_s     INTEGER NOT NULL DEFAULT 0,
+  watched_s     INTEGER NOT NULL DEFAULT 0, -- 
   is_completed  BOOLEAN NOT NULL DEFAULT FALSE,
   last_seen_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (student_id, lesson_id)
@@ -298,7 +298,7 @@ CREATE TABLE IF NOT EXISTS quiz_attempt_answers (
   attempt_id    BIGINT NOT NULL REFERENCES quiz_attempts(id) ON DELETE CASCADE,
   question_id   BIGINT NOT NULL REFERENCES quiz_questions(id) ON DELETE CASCADE,
   selected_option_ids BIGINT[],   -- cho MULTI_CHOICE
-  short_text    TEXT,
+  short_text    TEXT, 
   is_correct    BOOLEAN,
   UNIQUE (attempt_id, question_id)
 );
@@ -324,60 +324,14 @@ CREATE TABLE IF NOT EXISTS instructor_reviews (
   UNIQUE (instructor_id, student_id)
 );
 
---  CÁC PHẦN MESSAGE & CHAT CÓ THỂ BỎ QUA NẾU KHÔNG CẦN THIẾT
--- ==== CHAT (kênh theo khóa/bài) ====
-CREATE TABLE IF NOT EXISTS course_channels (
-  id          BIGSERIAL PRIMARY KEY,
-  course_id   BIGINT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-  lesson_id   BIGINT REFERENCES lessons(id) ON DELETE CASCADE,
-  name        TEXT NOT NULL,
-  is_readonly BOOLEAN NOT NULL DEFAULT FALSE
-);
-
-CREATE TABLE IF NOT EXISTS messages (
-  id            BIGSERIAL PRIMARY KEY,
-  channel_id    BIGINT NOT NULL REFERENCES course_channels(id) ON DELETE CASCADE,
-  sender_id     BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  body          TEXT NOT NULL,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  edited_at     TIMESTAMPTZ
-);
-
-CREATE INDEX IF NOT EXISTS idx_messages_channel_time ON messages(channel_id, created_at);
-
-CREATE TABLE IF NOT EXISTS message_attachments (
-  id          BIGSERIAL PRIMARY KEY,
-  message_id  BIGINT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
-  url         TEXT NOT NULL,
-  mime_type   TEXT,
-  meta        JSONB
-);
-
-CREATE TABLE IF NOT EXISTS message_mentions (
-  id          BIGSERIAL PRIMARY KEY,
-  message_id  BIGINT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
-  mentioned_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE
-);
-
--- ==== DM (chat 1–1) ====
+-- DM giữa sinh viên và giảng viên 
 CREATE TABLE IF NOT EXISTS dm_threads (
-  id          BIGSERIAL PRIMARY KEY,
-  user_a_id   BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  user_b_id   BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT dm_users_order CHECK (user_a_id < user_b_id),
-  UNIQUE (user_a_id, user_b_id)
+  id           BIGSERIAL PRIMARY KEY,
+  student_id   BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  instructor_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (student_id, instructor_id)
 );
-
-CREATE TABLE IF NOT EXISTS dm_messages (
-  id            BIGSERIAL PRIMARY KEY,
-  thread_id     BIGINT NOT NULL REFERENCES dm_threads(id) ON DELETE CASCADE,
-  sender_id     BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  body          TEXT NOT NULL,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- ==================================
 
 -- ==== RECOMMENDATIONS ====
 CREATE TABLE IF NOT EXISTS recommendations (
