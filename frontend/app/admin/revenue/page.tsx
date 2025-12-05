@@ -27,8 +27,32 @@ export default function InstructorRevenuePage() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+  let mounted = true;
+
+  async function fetchData() {
+    try {
+      const params = new URLSearchParams();
+      if (from) params.append('from', new Date(from).toISOString());
+      if (to) params.append('to', new Date(to).toISOString());
+
+      const res = await apiFetch(
+        `/api/revenue/instructor/my-courses?${params.toString()}`
+      );
+
+      if (mounted) {
+        setData(res.data || []);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  fetchData();
+
+  return () => {
+    mounted = false;
+  };
+}, [from, to]);
 
   return (
     <div>

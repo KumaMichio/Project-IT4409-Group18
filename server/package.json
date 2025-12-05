@@ -8,6 +8,9 @@
     "start": "node src/server.js",
     "test": "jest --runInBand",
     "test:watch": "jest --watchAll",
+    "test:uc16": "jest tests/recommendationService.test.js tests/recommendationRoutes.test.js",
+    "test:uc17": "jest tests/revenueService.test.js",
+    "test:uc18": "jest tests/systemService.test.js",
     "lint": "eslint src --ext .js",
     "migrate": "node scripts/run-migrations.js"
   },

@@ -18,7 +18,7 @@ type LogItem = {
   user_id: number | null;
   full_name: string | null;
   action: string;
-  detail: unknown;
+  detail: Record<string, unknown>;
   created_at: string;
 };
 
@@ -116,7 +116,7 @@ export default function AdminSystemPage() {
   );
 }
 
-function Card({ label, value }: { label: string; value: unknown }) {
+function Card({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="border rounded-lg bg-white p-3 shadow-sm">
       <div className="text-xs text-gray-500 mb-1">{label}</div>
