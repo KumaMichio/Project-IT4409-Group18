@@ -1,0 +1,9 @@
+[
+  {
+    "id": "106fd85e-b248-4f05-b178-bb08cdeac2d3",
+    "name": "bp",
+    "email": "1234@gmail.com",
+    "passwordHash": "$2a$10$bS6cQcmHD3KEQdBqNoYuGeDWWVnICbX99slxJVszBYwB1USS8n.O2",
+    "role": "student"
+  }
+]
