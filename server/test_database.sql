@@ -1,14 +1,12 @@
 DROP DATABASE IF EXISTS online_course;
+
 CREATE DATABASE online_course
     WITH 
     OWNER = postgres
-    ENCODING = 'UTF8'
-    LC_COLLATE = 'en_US.utf8'
-    LC_CTYPE = 'en_US.utf8'
-    TABLESPACE = pg_default
-    CONNECTION LIMIT = -1;
-    
+    ENCODING = 'UTF8';
+
 \c online_course;
+
 
 CREATE TABLE recommendation_feedback (
     feedback_id      BIGSERIAL PRIMARY KEY,
@@ -45,6 +43,36 @@ CREATE TABLE system_settings (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
+
+INSERT INTO recommendation_feedback (user_id, course_id, action)
+VALUES
+    (1, 101, 'PRIORITY'),
+    (1, 102, 'NOT_INTERESTED'),
+    (2, 101, 'HIDE'),
+    (3, 105, 'PRIORITY');
+
+INSERT INTO payments (user_id, course_id, amount, status, paid_at, method, transaction_id)
+VALUES
+    (1, 101, 199000, 'PAID', NOW(), 'Momo', 'TXN001'),
+    (1, 102, 299000, 'FAILED', NULL, 'VNPay', 'TXN002'),
+    (2, 103, 159000, 'PENDING', NULL, NULL, NULL),
+    (3, 104, 199000, 'PAID', NOW(), 'VNPay', 'TXN003');
+
+
+INSERT INTO activity_logs (user_id, action, detail)
+VALUES
+    (1, 'USER_LOGIN', '{"ip": "192.168.1.10"}'),
+    (1, 'COURSE_PURCHASED', '{"course_id": 101, "amount": 199000}'),
+    (2, 'USER_LOGOUT', '{"duration": "25m"}'),
+    (3, 'PAYMENT_FAILED', '{"course_id": 102, "reason": "Card error"}');
+
+
+INSERT INTO system_settings (key, value)
+VALUES
+    ('maintenance_mode', 'OFF'),
+    ('homepage_banner', 'Welcome to Online Course!'),
+    ('max_login_attempts', '5'),
+    ('enable_recommendation', 'TRUE');
 
 /* ví dụ:
    ('maintenance_mode', 'ON'/'OFF')

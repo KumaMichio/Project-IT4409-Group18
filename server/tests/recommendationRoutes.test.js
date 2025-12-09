@@ -1,11 +1,32 @@
+// tests/recommendationRoutes.test.js
+
+// 1. Mock authMiddleware trước khi import app/router
+//   CHÚ Ý: dùng đúng module name giống trong recommendationRoutes.js:
+//   const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
+jest.mock('../src/middleware/authMiddleware', () => ({
+  authMiddleware: (req, res, next) => {
+    // gắn user giả cho tất cả request trong test
+    req.user = { 
+      id: 123,
+      user_id: 123,
+      userId: 123,
+      role: 'STUDENT',
+    };
+    next();
+  },
+  // requireRole trả về 1 middleware, ở test chỉ cần cho qua
+  requireRole: () => (req, res, next) => next(),
+}));
+
+// 2. Mock recommendationService để khỏi gọi DB thật
+jest.mock('../src/services/recommendationService', () => ({
+  submitFeedback: jest.fn(),
+  listUserFeedback: jest.fn(),
+}));
+
 const request = require('supertest');
 const app = require('../src/app');
 const recommendationService = require('../src/services/recommendationService');
-
-// mock authMiddleware để khỏi check JWT thật
-jest.mock('../src/middleware/authMiddleware');
-// mock service để không gọi DB thật
-jest.mock('../src/services/recommendationService');
 
 describe('Recommendation Routes (UC16)', () => {
   beforeEach(() => {
@@ -37,7 +58,7 @@ describe('Recommendation Routes (UC16)', () => {
 
     expect(res.status).toBe(200);
     expect(recommendationService.submitFeedback).toHaveBeenCalledWith(
-      123,      // từ authMiddleware mock
+      123,      // lấy từ req.user.user_id do mock gắn vào
       10,
       'PRIORITY'
     );

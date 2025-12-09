@@ -9,4 +9,7 @@ function requireRole() {
   return (req, res, next) => next();
 }
 
-module.exports = { authMiddleware, requireRole };
+module.exports = {
+  authMiddleware: (req, res, next) => next(),
+  requireRole: () => (req, res, next) => next(),
+};
