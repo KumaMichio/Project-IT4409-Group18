@@ -1,0 +1,14 @@
+module.exports = {
+  testEnvironment: 'node',
+  coveragePathIgnorePatterns: ['/node_modules/', '/tests/'],
+  testMatch: ['**/__tests__/**/*.js', '**/?(*.)+(spec|test).js'],
+  collectCoverageFrom: [
+    'src/**/*.js',
+    '!src/server.js',
+    '!src/config/**',
+  ],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
+  testTimeout: 10000,
+};
+
+

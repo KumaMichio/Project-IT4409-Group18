@@ -2,19 +2,32 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
-const authRoutes = require('./routes/auth.routes');
+// Import routes
+const routes = require('./routes/index');
+
+// Import middlewares
+const { errorHandler } = require('./middlewares/error.middleware');
 
 const app = express();
 
-app.use(cors());
+// Middlewares
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+  })
+);
 app.use(express.json());
 
-// Routes cũ: /auth/signup, /auth/signin, /auth/me
-app.use('/auth', authRoutes);
-
-// Health check đơn giản
+// Health check
 app.get('/', (req, res) => {
   res.json({ status: 'ok' });
 });
+
+// Mount all routes
+app.use('/', routes);
+
+// Error handling middleware (phải đặt cuối cùng)
+app.use(errorHandler);
 
 module.exports = app;

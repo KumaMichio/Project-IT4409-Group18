@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const {
   findUserByEmail,
-  addUser,          // hoặc createUser, cả hai đều có
+  addUser,
   getUsers,
 } = require('../repositories/user.repository');
 
@@ -25,10 +25,19 @@ async function signup({ name, email, password, role }) {
     throw new AuthError(400, 'Missing fields');
   }
 
+  // Map role từ frontend sang database enum
+  // Frontend: 'student' hoặc 'teacher'
+  // Database: 'STUDENT' hoặc 'INSTRUCTOR'
+  // Không cho phép đăng ký admin
   const normalizedRole = (role || 'student').toLowerCase();
-  if (!['student', 'teacher', 'admin'].includes(normalizedRole)) {
-    throw new AuthError(400, 'Invalid role');
+  
+  // Chỉ cho phép student và teacher (teacher -> INSTRUCTOR)
+  if (!['student', 'teacher'].includes(normalizedRole)) {
+    throw new AuthError(400, 'Invalid role. Only student and teacher roles are allowed for registration.');
   }
+
+  // Map role sang database enum format
+  const dbRole = normalizedRole === 'student' ? 'STUDENT' : 'INSTRUCTOR';
 
   const existing = await findUserByEmail(email);
   if (existing) {
@@ -36,28 +45,27 @@ async function signup({ name, email, password, role }) {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const id =
-    (global.crypto && global.crypto.randomUUID)
-      ? global.crypto.randomUUID()
-      : String(Date.now());
+  // Không tạo id nữa, để database tự động generate BIGSERIAL
+  const user = { name, email, passwordHash, role: dbRole };
+  const createdUser = await addUser(user);
 
-  const user = { id, name, email, passwordHash, role: normalizedRole };
-  await addUser(user);
-
+  // Map role từ database enum về frontend format cho token và response
+  const frontendRole = dbRole === 'STUDENT' ? 'student' : 'teacher';
+  
   const token = signToken({
-    id: user.id,
-    email: user.email,
-    role: user.role,
-    name: user.name,
+    id: createdUser.id,
+    email: createdUser.email,
+    role: frontendRole, // Token dùng frontend format
+    name: createdUser.name,
   });
 
   return {
     token,
     user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
+      id: createdUser.id,
+      name: createdUser.name,
+      email: createdUser.email,
+      role: frontendRole, // Response dùng frontend format
     },
   };
 }
@@ -78,10 +86,11 @@ async function signin({ email, password }) {
     throw new AuthError(401, 'Invalid credentials');
   }
 
+  // mapRow đã map role từ database enum về frontend format
   const token = signToken({
     id: user.id,
     email: user.email,
-    role: user.role,
+    role: user.role, // Đã được map trong mapRow
     name: user.name,
   });
 
@@ -91,7 +100,7 @@ async function signin({ email, password }) {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role,
+      role: user.role, // Đã được map trong mapRow
     },
   };
 }

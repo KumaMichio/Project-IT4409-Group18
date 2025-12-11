@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "db:migrate": "node scripts/migrate.js",
-    "db:seed": "node scripts/seed.js"
+    "db:seed": "node scripts/seed.js",
+    "db:seed-admin": "node src/scripts/seed-admin.js"
   },
   "keywords": [],
   "author": "",

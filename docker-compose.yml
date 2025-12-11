@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_USER: online_course
       POSTGRES_PASSWORD: secret
-      POSTGRES_DB: online_course_db
+      POSTGRES_DB: online_course
     ports:
       - "5432:5432"
     volumes:
