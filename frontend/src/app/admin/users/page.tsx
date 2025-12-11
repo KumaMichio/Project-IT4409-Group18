@@ -36,6 +36,7 @@ export default function AdminUsersPage() {
     role: 'student',
   });
   const [formError, setFormError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchUsers();
@@ -108,7 +109,6 @@ export default function AdminUsersPage() {
 
     try {
       if (editingUser) {
-        // Update user
         const updateData: any = {
           name: formData.name,
           email: formData.email,
@@ -123,7 +123,6 @@ export default function AdminUsersPage() {
           body: JSON.stringify(updateData),
         });
       } else {
-        // Create user
         await apiFetch('/api/admin/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -166,133 +165,185 @@ export default function AdminUsersPage() {
   };
 
   const currentUsers = activeTab === 'instructor' ? instructors : students;
+  const filteredUsers = currentUsers.filter(
+    (user) =>
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Quản lý người dùng</h2>
-        <Button
-          variant="primary"
-          onClick={() => handleOpenModal()}
-        >
-          + Thêm người dùng
-        </Button>
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 mb-1">Tổng giảng viên</p>
+              <p className="text-2xl font-semibold text-gray-900">{instructors.length}+</p>
+            </div>
+            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+              <span className="text-2xl text-purple-600">👨‍🏫</span>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 mb-1">Tổng học viên</p>
+              <p className="text-2xl font-semibold text-gray-900">{students.length}+</p>
+            </div>
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <span className="text-2xl text-blue-600">🎓</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b mb-6">
-        <div className="flex space-x-4">
-          <button
-            onClick={() => setActiveTab('instructor')}
-            className={`px-4 py-2 font-medium ${
-              activeTab === 'instructor'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Giảng viên ({instructors.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('student')}
-            className={`px-4 py-2 font-medium ${
-              activeTab === 'student'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Học viên ({students.length})
-          </button>
-        </div>
+      <div className="bg-white rounded-lg border border-gray-200 p-2 shadow-sm inline-flex">
+        <button
+          onClick={() => setActiveTab('instructor')}
+          className={`px-6 py-2 rounded-lg font-medium transition-all ${
+            activeTab === 'instructor'
+              ? 'bg-purple-50 text-purple-700'
+              : 'text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          Giảng viên ({instructors.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('student')}
+          className={`px-6 py-2 rounded-lg font-medium transition-all ${
+            activeTab === 'student'
+              ? 'bg-blue-50 text-blue-700'
+              : 'text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          Học viên ({students.length})
+        </button>
       </div>
 
       {/* Users Table */}
-      {isLoading ? (
-        <div className="text-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Đang tải...</p>
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">
+              {activeTab === 'instructor' ? 'Quản lý giảng viên' : 'Quản lý học viên'}
+            </h3>
+            <div className="flex items-center space-x-2">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 w-64"
+                />
+                <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
+              </div>
+              <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">→</button>
+              <Button
+                variant="primary"
+                onClick={() => handleOpenModal()}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                + Thêm
+              </Button>
+            </div>
+          </div>
         </div>
-      ) : (
-        <div className="bg-white border rounded-lg overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">ID</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Tên</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Trạng thái</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Ngày tạo</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {currentUsers.length === 0 ? (
+        {isLoading ? (
+          <div className="p-12 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+            <p className="mt-4 text-gray-600">Đang tải...</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                    Chưa có {activeTab === 'instructor' ? 'giảng viên' : 'học viên'} nào
-                  </td>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Số điện thoại</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vai trò</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
                 </tr>
-              ) : (
-                currentUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm">{user.id}</td>
-                    <td className="px-4 py-3 text-sm font-medium">{user.name}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{user.email}</td>
-                    <td className="px-4 py-3 text-sm">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          user.is_active !== false
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {user.is_active !== false ? 'Hoạt động' : 'Vô hiệu hóa'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {user.created_at
-                        ? new Date(user.created_at).toLocaleDateString('vi-VN')
-                        : '-'}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleOpenModal(user)}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          Sửa
-                        </button>
-                        <button
-                          onClick={() => handleToggleActive(user)}
-                          className="text-yellow-600 hover:text-yellow-800"
-                        >
-                          {user.is_active !== false ? 'Vô hiệu' : 'Kích hoạt'}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(user)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          Xóa
-                        </button>
-                      </div>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                      {searchQuery ? 'Không tìm thấy kết quả' : `Chưa có ${activeTab === 'instructor' ? 'giảng viên' : 'học viên'} nào`}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+                ) : (
+                  filteredUsers.map((user) => (
+                    <tr key={user.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center mr-3">
+                            <span className="text-gray-600 font-medium">
+                              {user.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.email}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">+33757005467</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {user.role === 'teacher' ? 'Giảng viên' : 'Học viên'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-2">
+                          <button
+                            onClick={() => handleOpenModal(user)}
+                            className="text-purple-600 hover:text-purple-900"
+                          >
+                            Sửa
+                          </button>
+                          <button
+                            onClick={() => handleToggleActive(user)}
+                            className="text-yellow-600 hover:text-yellow-900"
+                          >
+                            {user.is_active !== false ? 'Vô hiệu' : 'Kích hoạt'}
+                          </button>
+                          <button
+                            onClick={() => handleDelete(user)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Xóa
+                          </button>
+                          <button className="text-gray-400 hover:text-gray-600">⋯</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Modal Form */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4">
-              {editingUser ? 'Sửa người dùng' : 'Thêm người dùng mới'}
-            </h3>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">
+                {editingUser ? 'Sửa người dùng' : 'Thêm người dùng mới'}
+              </h3>
+              <button
+                onClick={handleCloseModal}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
 
             {formError && (
-              <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
                 {formError}
               </div>
             )}
@@ -338,7 +389,11 @@ export default function AdminUsersPage() {
               />
 
               <div className="flex space-x-3 pt-4">
-                <Button type="submit" variant="primary" className="flex-1">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className="flex-1 bg-purple-600 hover:bg-purple-700"
+                >
                   {editingUser ? 'Cập nhật' : 'Tạo mới'}
                 </Button>
                 <Button
@@ -357,4 +412,3 @@ export default function AdminUsersPage() {
     </div>
   );
 }
-
