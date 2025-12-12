@@ -1,0 +1,577 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import axios from 'axios';
+import { API_URL } from '../../../config/api';
+import { CheckCircleTwoTone, UserOutlined, StarFilled, MinusOutlined, PlusOutlined, PlayCircleOutlined, FileTextOutlined } from '@ant-design/icons';
+import { Header } from '../../../components/layout/Header';
+
+interface Module {
+  id: number;
+  title: string;
+  position: number;
+  lessons?: Lesson[];
+}
+
+interface Lesson {
+  id: number;
+  title: string;
+  lesson_type: string;
+  duration_s: number;
+  position: number;
+}
+
+interface CourseDetail {
+  course: {
+    id: number;
+    title: string;
+    description: string;
+    thumbnail_url: string;
+    price_cents: number;
+    currency: string;
+    instructor_id: number;
+    instructor_name: string;
+    instructor_avatar: string;
+    instructor_bio: string;
+    instructor_headline: string;
+    total_students: number;
+    total_lessons: number;
+    total_duration_s: number;
+    total_modules: number;
+  };
+  modules: Module[];
+  rating: {
+    average: string;
+    total_reviews: number;
+    rating_distribution: {
+      5: number;
+      4: number;
+      3: number;
+      2: number;
+      1: number;
+    };
+  };
+  reviews: Array<{
+    id: number;
+    rating: number;
+    comment: string;
+    created_at: string;
+    student_name: string;
+    student_avatar: string;
+  }>;
+  enrollment: {
+    enrolled: boolean;
+    status?: string;
+    enrolled_at?: string;
+  };
+}
+
+const STUDENT_ID = 1;
+
+export default function CourseDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const courseId = params?.courseId as string;
+
+  const [courseDetail, setCourseDetail] = useState<CourseDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set());
+  const [relatedCourses, setRelatedCourses] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchCourseDetail();
+    fetchRelatedCourses();
+  }, [courseId]);
+
+  const fetchRelatedCourses = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/courses/${courseId}/related`);
+      setRelatedCourses(response.data);
+    } catch (error) {
+      console.error('Error fetching related courses:', error);
+      console.error('Error details:', error.response?.data);
+      console.error('API URL:', `${API_URL}/courses/${courseId}/related`);
+      // If API fails, keep empty array
+      setRelatedCourses([]);
+    }
+  };
+
+  const fetchCourseDetail = async () => {
+    try {
+      const detailResponse = await axios.get(
+        `${API_URL}/courses/${courseId}?studentId=${STUDENT_ID}`
+      );
+      
+      // If enrolled, fetch detailed content with lessons
+      if (detailResponse.data.enrollment.enrolled) {
+        try {
+          const contentResponse = await axios.get(
+            `${API_URL}/courses/${courseId}/content?studentId=${STUDENT_ID}`
+          );
+          
+          // Merge content data with detail data
+          const modulesWithLessons = detailResponse.data.modules.map((module: Module) => {
+            const moduleContent = contentResponse.data.modules.find(
+              (m: any) => m.id === module.id
+            );
+            return {
+              ...module,
+              lessons: moduleContent?.lessons || []
+            };
+          });
+          
+          setCourseDetail({
+            ...detailResponse.data,
+            modules: modulesWithLessons
+          });
+        } catch (contentError) {
+          console.error('Error fetching course content:', contentError);
+          // Still show course detail even if content fails
+          setCourseDetail(detailResponse.data);
+        }
+      } else {
+        // Not enrolled - just show modules without lessons
+        setCourseDetail(detailResponse.data);
+      }
+    } catch (error) {
+      console.error('Error fetching course detail:', error);
+      alert('Không thể tải thông tin khóa học');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleModule = (moduleId: number) => {
+    const newExpanded = new Set(expandedModules);
+    if (newExpanded.has(moduleId)) {
+      newExpanded.delete(moduleId);
+    } else {
+      newExpanded.add(moduleId);
+    }
+    setExpandedModules(newExpanded);
+  };
+
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours} giờ ${minutes} phút`;
+    }
+    return `${minutes} phút`;
+  };
+
+  const formatPrice = (cents: number) => {
+    return new Intl.NumberFormat('vi-VN').format(cents) + ' đ';
+  };
+
+  const formatOriginalPrice = (cents: number) => {
+    const originalPrice = Math.floor(cents * 1.6); // Assuming 37.5% discount
+    return new Intl.NumberFormat('vi-VN').format(originalPrice) + ' đ';
+  };
+
+  const handleEnroll = () => {
+    // TODO: Implement enrollment logic
+    alert('Chức năng đăng ký khóa học đang được phát triển');
+  };
+
+  const handleStartLearning = () => {
+    router.push(`/courses/${courseId}/learn`);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl">Đang tải...</div>
+      </div>
+    );
+  }
+
+  if (!courseDetail) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl">Không tìm thấy khóa học</div>
+      </div>
+    );
+  }
+
+  const { course, modules, rating, reviews, enrollment } = courseDetail;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      
+      {/* Hero Section with reduced height */}
+      <div className="bg-gray-900 text-white py-8 relative">
+        <div className="container mx-auto px-4 max-w-7xl">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left: Course Info */}
+            <div className="lg:col-span-2 pb-32">
+              <div className="mb-3">
+                <span className="bg-yellow-400 text-gray-900 text-xs px-3 py-1 rounded font-medium">
+                  Bán chạy nhất
+                </span>
+              </div>
+              <h1 className="text-3xl font-bold mb-3">{course.title}</h1>
+              <p className="text-lg text-gray-300 mb-4">{course.description}</p>
+              
+              <div className="flex items-center gap-4 mb-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-yellow-400 font-bold">
+                    {rating.average}
+                  </span>
+                  <div className="flex">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <StarFilled
+                        key={star}
+                        className={`text-xs ${
+                          star <= parseFloat(rating.average)
+                            ? 'text-yellow-400'
+                            : 'text-gray-600'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-gray-300">
+                    ({rating.total_reviews} đánh giá)
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <UserOutlined />
+                  <span>{course.total_students} học viên</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-sm">
+                <span>Giảng viên:</span>
+                <span className="font-semibold text-blue-400 hover:underline cursor-pointer">
+                  {course.instructor_name}
+                </span>
+              </div>
+            </div>
+
+            {/* Right: Placeholder for sidebar positioning */}
+            <div className="lg:col-span-1"></div>
+          </div>
+        </div>
+
+        {/* Sidebar - Positioned absolute to overlay banner */}
+        <div className="absolute top-8 right-0 w-full lg:w-auto lg:right-[calc((100%-1280px)/2+2rem)] z-10 px-4 lg:px-0">
+          <div className="bg-white rounded-lg shadow-xl overflow-hidden max-w-[340px] ml-auto">
+            <div className="relative">
+              <img
+                src={course.thumbnail_url || '/placeholder-course.jpg'}
+                alt={course.title}
+                className="w-full h-48 object-cover"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
+                <PlayCircleOutlined className="text-white text-6xl hover:scale-110 transition cursor-pointer" />
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="flex items-baseline gap-2 mb-4">
+                <div className="text-3xl font-bold text-red-600">
+                  {formatPrice(course.price_cents)}
+                </div>
+                <div className="text-lg text-gray-400 line-through">
+                  {formatOriginalPrice(course.price_cents)}
+                </div>
+              </div>
+
+              {enrollment.enrolled ? (
+                <button
+                  onClick={handleStartLearning}
+                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition mb-2"
+                >
+                  Vào học ngay
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={handleEnroll}
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition mb-2"
+                  >
+                    Thêm vào giỏ hàng
+                  </button>
+                  <button
+                    onClick={handleEnroll}
+                    className="w-full border-2 border-gray-900 text-gray-900 py-3 rounded-lg font-semibold hover:bg-gray-100 transition mb-4"
+                  >
+                    Mua ngay
+                  </button>
+                </>
+              )}
+
+              <div className="text-center text-xs text-gray-500 mb-4">
+                Đảm bảo hoàn tiền trong 30 ngày
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="font-bold mb-3 text-gray-900">Khóa học này bao gồm:</h3>
+                <div className="space-y-2 text-sm text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <PlayCircleOutlined className="text-gray-700" />
+                    <span>{formatDuration(course.total_duration_s)} video theo yêu cầu</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FileTextOutlined className="text-gray-700" />
+                    <span>1 bài viết</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FileTextOutlined className="text-gray-700" />
+                    <span>8 tài nguyên có thể tải xuống</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-gray-700" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" />
+                    </svg>
+                    <span>Truy cập trên thiết bị di động và TV</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-gray-700" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                    </svg>
+                    <span>Quyền truy cập đầy đủ suốt đời</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 max-w-7xl py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left: Content */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* What you'll learn */}
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <h2 className="text-2xl font-bold mb-4">Những gì bạn sẽ học</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {modules.slice(0, 6).map((module) => (
+                  <div key={module.id} className="flex items-start gap-2">
+                    <CheckCircleTwoTone twoToneColor="#52c41a" className="mt-1 flex-shrink-0" />
+                    <span className="text-sm">{module.title}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Course Content */}
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <h2 className="text-2xl font-bold mb-4">Nội dung khóa học</h2>
+              <div className="mb-4 text-sm text-gray-600">
+                {course.total_modules} phần • {course.total_lessons} bài giảng •{' '}
+                {formatDuration(course.total_duration_s)}
+              </div>
+
+              <div className="space-y-2">
+                {modules.map((module) => {
+                  const isExpanded = expandedModules.has(module.id);
+                  const hasLessons = module.lessons && module.lessons.length > 0;
+                  const totalLessons = module.lessons?.length || 0;
+                  const totalDuration = module.lessons?.reduce((sum, lesson) => sum + lesson.duration_s, 0) || 0;
+                  
+                  return (
+                    <div key={module.id} className="border border-gray-300 rounded overflow-hidden">
+                      <div 
+                        className={`p-4 flex justify-between items-center ${
+                          hasLessons ? 'cursor-pointer hover:bg-gray-50' : 'cursor-default'
+                        } transition bg-white`}
+                        onClick={() => hasLessons && toggleModule(module.id)}
+                      >
+                        <div className="flex items-center gap-3 flex-1">
+                          <span className="font-bold text-gray-900">
+                            {module.title}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {hasLessons && (
+                            <>
+                              {isExpanded ? (
+                                <MinusOutlined className="text-gray-600 text-lg font-bold" />
+                              ) : (
+                                <PlusOutlined className="text-gray-600 text-lg font-bold" />
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {isExpanded && hasLessons && (
+                        <div className="bg-white border-t border-gray-300">
+                          {module.lessons.map((lesson) => (
+                            <div 
+                              key={lesson.id} 
+                              className="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer border-b border-gray-200 last:border-b-0"
+                            >
+                              <PlayCircleOutlined className="text-xl flex-shrink-0" style={{ color: '#00ADEF' }} />
+                              <span className="hover:underline font-medium" style={{ color: '#00ADEF' }}>
+                                {lesson.title}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Instructor Section */}
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <h2 className="text-2xl font-bold mb-6">Giảng viên</h2>
+              <div className="flex items-start gap-4">
+                <div className="w-20 h-20 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
+                  {course.instructor_avatar ? (
+                    <img
+                      src={course.instructor_avatar}
+                      alt={course.instructor_name}
+                      className="w-full h-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <UserOutlined className="text-3xl text-gray-600" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-xl mb-1" style={{ color: '#00ADEF' }}>
+                    {course.instructor_name}
+                  </h3>
+                  {course.instructor_headline && (
+                    <div className="text-sm text-gray-600 mb-3">{course.instructor_headline}</div>
+                  )}
+                  {course.instructor_bio && (
+                    <p className="text-gray-700 leading-relaxed">{course.instructor_bio}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Empty for spacing */}
+          <div className="lg:col-span-1"></div>
+        </div>
+
+        {/* Related Courses - Full Width */}
+        <div className="mt-12">
+          <h2 className="text-2xl font-bold mb-6">Học viên khác cũng mua</h2>
+          {relatedCourses.length > 0 ? (
+            <div className="overflow-x-auto pb-4">
+              <div className="flex gap-6" style={{ minWidth: 'min-content' }}>
+                {relatedCourses.map((relatedCourse) => (
+                  <div 
+                    key={relatedCourse.id} 
+                    className="bg-white rounded-lg shadow-sm border overflow-hidden flex-shrink-0 cursor-pointer hover:shadow-lg transition"
+                    style={{ width: '320px' }}
+                    onClick={() => router.push(`/courses/${relatedCourse.id}`)}
+                  >
+                    <img
+                      src={relatedCourse.thumbnail_url || '/placeholder-course.jpg'}
+                      alt={relatedCourse.title}
+                      className="w-full h-48 object-cover"
+                    />
+                    <div className="p-4">
+                      <h3 className="font-bold text-base mb-2 line-clamp-2 min-h-[48px]">
+                        {relatedCourse.title}
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-3">{relatedCourse.instructor_name}</p>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-yellow-500 font-bold">
+                          {parseFloat(relatedCourse.avg_rating).toFixed(1)}
+                        </span>
+                        <div className="flex">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <StarFilled
+                              key={star}
+                              className={`text-xs ${
+                                star <= Math.round(parseFloat(relatedCourse.avg_rating)) 
+                                  ? 'text-yellow-400' 
+                                  : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          ({relatedCourse.total_students})
+                        </span>
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-xl font-bold text-red-600">{formatPrice(relatedCourse.price_cents)}</span>
+                        {relatedCourse.price_cents > 0 && (
+                          <span className="text-sm text-gray-400 line-through">
+                            {formatOriginalPrice(relatedCourse.price_cents)}
+                          </span>
+                        )}
+                      </div>
+                      {relatedCourse.total_students > 100 && (
+                        <div className="mt-2">
+                          <span className="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">
+                            Bán chạy nhất
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-gray-500 py-8">
+              Không có khóa học liên quan
+            </div>
+          )}
+        </div>
+
+        {/* Student Reviews - Testimonial Style */}
+        {reviews.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold mb-8 text-center">Đánh giá của học viên</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {reviews.map((review) => (
+                <div 
+                  key={review.id} 
+                  className="bg-white rounded-lg shadow-sm border p-6 flex flex-col"
+                >
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-16 h-16 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
+                      {review.student_avatar ? (
+                        <img
+                          src={review.student_avatar}
+                          alt={review.student_name}
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <UserOutlined className="text-2xl text-gray-600" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="font-bold text-lg">{review.student_name}</div>
+                      <div className="text-sm text-gray-500">Marketing Manager</div>
+                    </div>
+                  </div>
+                  
+                  <p className="text-gray-700 leading-relaxed mb-4 flex-1">
+                    {review.comment}
+                  </p>
+                  
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <StarFilled
+                        key={star}
+                        className={`text-xl ${
+                          star <= review.rating ? 'text-red-500' : 'text-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

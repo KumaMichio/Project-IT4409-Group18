@@ -4,10 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import axios from 'axios';
 import { API_URL } from '../../../../config/api';
-import { VideoPlayer } from '../../../../components/learn/VideoPlayer';
-import { LessonSidebar } from '../../../../components/learn/LessonSidebar';
-import { LessonMeta } from '../../../../components/learn/LessonMeta';
-import { Course, Lesson, Module } from '../../../../components/learn/types';
+import { VideoPlayer } from '../../../../components/course/VideoPlayer';
+import { LessonSidebar } from '../../../../components/course/LessonSidebar';
+import { LessonMeta } from '../../../../components/course/LessonMeta';
+import { Course, Lesson, Module } from '../../../../components/course/types';
 
 const STUDENT_ID = 1; // TODO: Get from auth context
 

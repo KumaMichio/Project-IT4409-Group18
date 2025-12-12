@@ -2,6 +2,7 @@ import 'antd/dist/reset.css';
 import './globals.css';
 import type { Metadata } from 'next';
 import { ReactNode } from 'react';
+import Footer from '../components/layout/Footer';
 
 export const metadata: Metadata = {
   title: 'LMS',
@@ -11,7 +12,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <Footer />
+      </body>
     </html>
   );
 }

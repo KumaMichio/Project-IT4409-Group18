@@ -3,12 +3,12 @@ const router = express.Router();
 const {
   updateLessonProgress,
   markLessonComplete
-} = require('../controllers/lessonController');
+} = require('../controllers/lesson.controller');
 
-// POST /api/lessons/:lessonId/progress - Update lesson watch progress
+
 router.post('/:lessonId/progress', updateLessonProgress);
 
-// POST /api/lessons/:lessonId/complete - Mark lesson as completed
+
 router.post('/:lessonId/complete', markLessonComplete);
 
 module.exports = router;

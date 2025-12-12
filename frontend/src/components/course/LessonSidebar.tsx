@@ -2,7 +2,7 @@
 
 import {
   CheckCircleTwoTone,
-  PlayCircleFilled,
+  
   ClockCircleOutlined,
   FileTextOutlined,
   LinkOutlined,
@@ -50,12 +50,12 @@ export function LessonSidebar({
             className="w-full p-4 flex items-center justify-between hover:bg-gray-100 transition-colors"
           >
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-gray-900 text-base">
+              <span className="font-medium text-gray-900 text-base">
                 {module.position}. {module.title}
               </span>
             </div>
             <div className="flex items-center gap-3 text-gray-600">
-              <span className="text-sm">
+              <span className="text-sm font-normal">
                 {module.lessons.filter(l => l.is_completed).length}/{module.lessons.length}
               </span>
               <DownOutlined className={`transition-transform ${expandedModules.has(module.id) ? 'rotate-180' : ''}`} />
@@ -83,12 +83,12 @@ export function LessonSidebar({
                     </div>
 
                     <div className="flex-1">
-                      <div className="font-medium text-sm text-gray-900">
+                      <div className="text-sm text-gray-900 font-normal">
                         {lesson.position}. {lesson.title}
                       </div>
 
                       {lesson.duration_s && (
-                        <div className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                        <div className="text-xs text-gray-600 mt-1 flex items-center gap-1 font-normal">
                           <ClockCircleOutlined /> {formatDuration(lesson.duration_s)}
                         </div>
                       )}
