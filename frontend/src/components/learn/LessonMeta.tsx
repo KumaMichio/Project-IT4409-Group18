@@ -1,5 +1,6 @@
 'use client';
 
+import { ClockCircleOutlined, CheckCircleTwoTone } from '@ant-design/icons';
 import { Lesson } from './types';
 
 const formatDuration = (seconds: number | null) => {
@@ -18,9 +19,13 @@ export function LessonMeta({ lesson }: LessonMetaProps) {
     <div className="bg-gray-800 p-4 text-white">
       <h2 className="text-lg font-semibold">{lesson.title}</h2>
       <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
-        <span>⏱️ {formatDuration(lesson.duration_s)}</span>
+        <span className="flex items-center gap-1">
+          <ClockCircleOutlined /> {formatDuration(lesson.duration_s)}
+        </span>
         {lesson.is_completed && (
-          <span className="text-green-500">✓ Đã hoàn thành</span>
+          <span className="flex items-center gap-1 text-green-500">
+            <CheckCircleTwoTone twoToneColor="#52c41a" /> Đã hoàn thành
+          </span>
         )}
       </div>
     </div>

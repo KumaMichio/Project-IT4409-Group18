@@ -1,5 +1,16 @@
 'use client';
 
+import {
+  CheckCircleTwoTone,
+  PlayCircleFilled,
+  ClockCircleOutlined,
+  FileTextOutlined,
+  LinkOutlined,
+  FormOutlined,
+  LockOutlined,
+  DownOutlined,
+  MinusCircleOutlined
+} from '@ant-design/icons';
 import { Module, Lesson } from './types';
 
 type LessonSidebarProps = {
@@ -43,18 +54,11 @@ export function LessonSidebar({
                 {module.position}. {module.title}
               </span>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-600">
+            <div className="flex items-center gap-3 text-gray-600">
+              <span className="text-sm">
                 {module.lessons.filter(l => l.is_completed).length}/{module.lessons.length}
               </span>
-              <svg
-                className={`w-5 h-5 text-gray-600 transition-transform ${expandedModules.has(module.id) ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              <DownOutlined className={`transition-transform ${expandedModules.has(module.id) ? 'rotate-180' : ''}`} />
             </div>
           </button>
 
@@ -70,13 +74,11 @@ export function LessonSidebar({
                     }`}
                 >
                   <div className="flex items-start gap-2">
-                    <div className="flex-shrink-0 mt-1">
+                    <div className="flex-shrink-0 mt-1 text-base">
                       {lesson.is_completed ? (
-                        <span className="text-green-600 text-base">✓</span>
-                      ) : lesson.assets.find(a => a.asset_kind === 'VIDEO') ? (
-                        <span className="text-red-600 text-base">▶</span>
+                        <CheckCircleTwoTone twoToneColor="#52c41a" />
                       ) : (
-                        <span className="text-gray-500 text-base">○</span>
+                        <MinusCircleOutlined className="text-gray-400" />
                       )}
                     </div>
 
@@ -86,8 +88,8 @@ export function LessonSidebar({
                       </div>
 
                       {lesson.duration_s && (
-                        <div className="text-xs text-gray-600 mt-1">
-                          ⏱️ {formatDuration(lesson.duration_s)}
+                        <div className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                          <ClockCircleOutlined /> {formatDuration(lesson.duration_s)}
                         </div>
                       )}
 
@@ -102,7 +104,7 @@ export function LessonSidebar({
                                 onClick={(e) => e.stopPropagation()}
                                 className="text-xs text-blue-700 hover:underline flex items-center gap-1 font-medium"
                               >
-                                📄 Tài liệu PDF
+                                <FileTextOutlined /> Tài liệu PDF
                               </a>
                             )}
                             {asset.asset_kind === 'LINK' && (
@@ -113,7 +115,7 @@ export function LessonSidebar({
                                 onClick={(e) => e.stopPropagation()}
                                 className="text-xs text-blue-700 hover:underline flex items-center gap-1 font-medium"
                               >
-                                🔗 Link tham khảo
+                                <LinkOutlined /> Link tham khảo
                               </a>
                             )}
                           </div>
@@ -125,15 +127,15 @@ export function LessonSidebar({
                             onClick={(e) => e.stopPropagation()}
                             className="text-xs text-purple-700 hover:underline flex items-center gap-1 font-medium"
                           >
-                            📝 Làm bài quiz: {lesson.quiz.title}
+                            <FormOutlined /> Làm bài quiz: {lesson.quiz.title}
                           </a>
                         )}
                       </div>
                     </div>
 
                     {lesson.requires_quiz_pass && !lesson.is_completed && (
-                      <div className="flex-shrink-0">
-                        <span className="text-gray-500 text-base">🔒</span>
+                      <div className="flex-shrink-0 text-gray-500 text-base">
+                        <LockOutlined />
                       </div>
                     )}
                   </div>
