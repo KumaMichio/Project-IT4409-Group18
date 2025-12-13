@@ -1,0 +1,20 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:16
+    container_name: ocp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: online_course
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: online_course
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./infra/postgres-data:/var/lib/postgresql/data
+    networks:
+      - ocp-network
+
+networks:
+  ocp-network:
+    driver: bridge
