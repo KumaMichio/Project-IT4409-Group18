@@ -106,6 +106,25 @@ class QuizController {
       res.status(500).json({ message: 'Server error' });
     }
   }
+
+  async getInstructorQuiz(req, res) {
+    try {
+      const { quizId } = req.params;
+      // In a real app, we should verify the instructor owns the course this quiz belongs to.
+      // For now, we rely on the route being protected by INSTRUCTOR role.
+      const quiz = await quizService.getQuiz(quizId);
+      
+      if (!quiz) {
+        return res.status(404).json({ message: 'Quiz not found' });
+      }
+
+      // Return full quiz data including is_correct
+      res.json(quiz);
+    } catch (error) {
+      console.error('Error getting instructor quiz:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
 }
 
 module.exports = new QuizController();

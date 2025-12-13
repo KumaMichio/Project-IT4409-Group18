@@ -40,7 +40,7 @@ class LessonRepository {
   async getLessonsByModuleId(moduleId) {
     const result = await pool.query(
       `SELECT l.*, la.url as video_url,
-              EXISTS(SELECT 1 FROM quizzes q WHERE q.lesson_id = l.id) as has_quiz
+              (SELECT id FROM quizzes q WHERE q.lesson_id = l.id LIMIT 1) as quiz_id
        FROM lessons l
        LEFT JOIN lesson_assets la ON l.id = la.lesson_id AND la.asset_kind = 'VIDEO'
        WHERE l.module_id = $1 

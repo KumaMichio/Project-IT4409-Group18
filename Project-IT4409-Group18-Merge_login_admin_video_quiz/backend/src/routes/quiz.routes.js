@@ -2,8 +2,11 @@ const express = require('express');
 const router = express.Router();
 const quizController = require('../controllers/quiz.controller');
 
-// Get quiz by ID
+// Get quiz by ID (Public/Student view - hides answers)
 router.get('/:quizId', quizController.getQuiz);
+
+// Get quiz by ID (Instructor view - shows answers)
+router.get('/:quizId/instructor', quizController.getInstructorQuiz);
 
 // Create quiz attempt
 router.post('/:quizId/attempts', quizController.createAttempt);

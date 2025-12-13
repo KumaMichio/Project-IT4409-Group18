@@ -90,6 +90,9 @@ export default function InstructorCoursesPage() {
                 
                 <div className="flex flex-col gap-2">
                   <div className="flex gap-2">
+                    <Link href={`/instructor/courses/${course.id}/view`} className="flex-1">
+                      <Button variant="outline" size="sm" className="w-full">View</Button>
+                    </Link>
                     <Link href={`/instructor/courses/${course.id}/edit`} className="flex-1">
                       <Button variant="outline" size="sm" className="w-full">Edit</Button>
                     </Link>

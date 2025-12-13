@@ -59,6 +59,7 @@ export interface Lesson {
   requires_quiz_pass: boolean;
   video_url?: string;
   has_quiz?: boolean;
+  quiz_id?: number;
 }
 
 export const courseApi = {
@@ -184,5 +185,9 @@ export const courseApi = {
     return apiFetch(`/api/quizzes/${quizId}`, {
       method: 'DELETE',
     });
+  },
+
+  getInstructorQuiz: async (quizId: number): Promise<any> => {
+    return apiFetch(`/api/quizzes/${quizId}/instructor`);
   }
 };

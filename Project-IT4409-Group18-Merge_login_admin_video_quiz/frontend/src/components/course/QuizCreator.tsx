@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '../common/Button';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { courseApi } from '@/lib/courseApi';
@@ -6,16 +6,40 @@ import { courseApi } from '@/lib/courseApi';
 interface QuizCreatorProps {
   courseId: number;
   lessonId: number;
+  quizId?: number;
   onCancel: () => void;
   onSuccess: () => void;
 }
 
-export default function QuizCreator({ courseId, lessonId, onCancel, onSuccess }: QuizCreatorProps) {
+export default function QuizCreator({ courseId, lessonId, quizId, onCancel, onSuccess }: QuizCreatorProps) {
   const [title, setTitle] = useState('');
   const [passScore, setPassScore] = useState(60);
   const [questions, setQuestions] = useState<any[]>([
     { question: '', qtype: 'SINGLE_CHOICE', points: 1, options: [{ option_text: '', is_correct: false }] }
   ]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (quizId) {
+      fetchQuiz();
+    }
+  }, [quizId]);
+
+  const fetchQuiz = async () => {
+    setIsLoading(true);
+    try {
+      const data = await courseApi.getInstructorQuiz(quizId!);
+      setTitle(data.title);
+      setPassScore(data.pass_score);
+      if (data.questions && data.questions.length > 0) {
+        setQuestions(data.questions);
+      }
+    } catch (err: any) {
+      alert('Failed to load quiz: ' + err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleAddQuestion = () => {
     setQuestions([...questions, { question: '', qtype: 'SINGLE_CHOICE', points: 1, options: [{ option_text: '', is_correct: false }] }]);
@@ -39,16 +63,26 @@ export default function QuizCreator({ courseId, lessonId, onCancel, onSuccess }:
         attempts_allowed: 0, // Unlimited
         questions
       };
-      await courseApi.createQuiz(quizData);
+      
+      if (quizId) {
+        // For now, we delete and recreate because updating complex nested structures is hard
+        await courseApi.deleteQuiz(quizId);
+        await courseApi.createQuiz(quizData);
+      } else {
+        await courseApi.createQuiz(quizData);
+      }
+      
       onSuccess();
     } catch (err: any) {
       alert(err.message);
     }
   };
 
+  if (isLoading) return <div>Loading quiz data...</div>;
+
   return (
     <div className="bg-white p-4 border rounded shadow-lg mt-2">
-      <h3 className="font-bold mb-4">Create Quiz</h3>
+      <h3 className="font-bold mb-4">{quizId ? 'Edit Quiz' : 'Create Quiz'}</h3>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium">Quiz Title</label>
@@ -136,7 +170,7 @@ export default function QuizCreator({ courseId, lessonId, onCancel, onSuccess }:
 
         <div className="flex gap-2 justify-end">
           <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-          <Button type="submit">Create Quiz</Button>
+          <Button type="submit">{quizId ? 'Update Quiz' : 'Create Quiz'}</Button>
         </div>
       </form>
     </div>

@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import { courseApi, Module, Lesson } from '@/lib/courseApi';
 import Button from '@/components/common/Button';
-import { PlusOutlined, EditOutlined, DeleteOutlined, VideoCameraOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, VideoCameraOutlined, EyeOutlined, CloseOutlined } from '@ant-design/icons';
 import QuizCreator from './QuizCreator';
+import QuizViewer from './QuizViewer';
+import { VideoPlayer } from './VideoPlayer';
 
 interface CourseContentManagerProps {
   courseId: number;
+  readOnly?: boolean;
 }
 
-export default function CourseContentManager({ courseId }: CourseContentManagerProps) {
+export default function CourseContentManager({ courseId, readOnly = false }: CourseContentManagerProps) {
   const [modules, setModules] = useState<Module[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,6 +25,7 @@ export default function CourseContentManager({ courseId }: CourseContentManagerP
   const [addingLessonToModuleId, setAddingLessonToModuleId] = useState<number | null>(null);
   const [editingLessonId, setEditingLessonId] = useState<number | null>(null);
   const [addingQuizToLessonId, setAddingQuizToLessonId] = useState<number | null>(null);
+  const [viewingVideoLessonId, setViewingVideoLessonId] = useState<number | null>(null);
   const [lessonForm, setLessonForm] = useState({ title: '', duration_s: 0, requires_quiz_pass: false, video_url: '' });
 
   useEffect(() => {
@@ -113,9 +117,11 @@ export default function CourseContentManager({ courseId }: CourseContentManagerP
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Course Content</h2>
-        <Button onClick={() => setIsAddingModule(true)} disabled={isAddingModule}>
-          <PlusOutlined /> Add Module
-        </Button>
+        {!readOnly && (
+          <Button onClick={() => setIsAddingModule(true)} disabled={isAddingModule}>
+            <PlusOutlined /> Add Module
+          </Button>
+        )}
       </div>
 
       {error && <div className="text-red-500">{error}</div>}
@@ -155,20 +161,22 @@ export default function CourseContentManager({ courseId }: CourseContentManagerP
               ) : (
                 <>
                   <h3 className="font-medium">{module.title}</h3>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => { setEditingModuleId(module.id); setModuleTitle(module.title); }}
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-                      <EditOutlined />
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteModule(module.id)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <DeleteOutlined />
-                    </button>
-                  </div>
+                  {!readOnly && (
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => { setEditingModuleId(module.id); setModuleTitle(module.title); }}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        <EditOutlined />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteModule(module.id)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        <DeleteOutlined />
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -225,53 +233,107 @@ export default function CourseContentManager({ courseId }: CourseContentManagerP
                           {lesson.has_quiz && <span className="text-xs bg-green-100 text-green-800 px-1 rounded">Quiz Added</span>}
                         </div>
                         <div className="flex gap-2 items-center">
-                          <button 
-                            onClick={() => setAddingQuizToLessonId(lesson.id)}
-                            className="text-green-600 hover:text-green-800 text-sm flex items-center gap-1 px-2 py-1 rounded hover:bg-green-50"
-                            title="Add Quiz"
-                          >
-                            <PlusOutlined /> Quiz
-                          </button>
-                          <button 
-                            onClick={() => { 
-                              setEditingLessonId(lesson.id); 
-                              setLessonForm({ 
-                                title: lesson.title, 
-                                duration_s: lesson.duration_s, 
-                                requires_quiz_pass: lesson.requires_quiz_pass,
-                                video_url: lesson.video_url || ''
-                              }); 
-                            }}
-                            className="text-blue-600 hover:text-blue-800"
-                          >
-                            <EditOutlined />
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteLesson(lesson.id)}
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            <DeleteOutlined />
-                          </button>
+                          {lesson.video_url && (
+                            <button 
+                              onClick={() => setViewingVideoLessonId(lesson.id)}
+                              className="text-purple-600 hover:bg-purple-50 hover:text-opacity-80 text-sm flex items-center gap-1 px-2 py-1 rounded"
+                              title="View Video"
+                            >
+                              <VideoCameraOutlined /> View Video
+                            </button>
+                          )}
+                          {(lesson.quiz_id || !readOnly) && (
+                            <button 
+                              onClick={() => setAddingQuizToLessonId(lesson.id)}
+                              className={`${lesson.quiz_id ? 'text-blue-600 hover:bg-blue-50' : 'text-green-600 hover:bg-green-50'} hover:text-opacity-80 text-sm flex items-center gap-1 px-2 py-1 rounded`}
+                              title={lesson.quiz_id ? "View Quiz" : "Add Quiz"}
+                            >
+                              {lesson.quiz_id ? <EyeOutlined /> : <PlusOutlined />} 
+                              {lesson.quiz_id ? 'View Quiz' : 'Quiz'}
+                            </button>
+                          )}
+                          {!readOnly && (
+                            <>
+                              <button 
+                                onClick={() => { 
+                                  setEditingLessonId(lesson.id); 
+                                  setLessonForm({ 
+                                    title: lesson.title, 
+                                    duration_s: lesson.duration_s, 
+                                    requires_quiz_pass: lesson.requires_quiz_pass,
+                                    video_url: lesson.video_url || ''
+                                  }); 
+                                }}
+                                className="text-blue-600 hover:text-blue-800"
+                              >
+                                <EditOutlined />
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteLesson(lesson.id)}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <DeleteOutlined />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </>
                     )}
                   </div>
                   {addingQuizToLessonId === lesson.id && (
-                    <QuizCreator
-                      courseId={courseId}
-                      lessonId={lesson.id}
-                      onCancel={() => setAddingQuizToLessonId(null)}
-                      onSuccess={() => {
-                        setAddingQuizToLessonId(null);
-                        fetchContent();
-                      }}
-                    />
+                    lesson.quiz_id ? (
+                      <QuizViewer
+                        courseId={courseId}
+                        lessonId={lesson.id}
+                        quizId={lesson.quiz_id}
+                        onClose={() => setAddingQuizToLessonId(null)}
+                        readOnly={readOnly}
+                      />
+                    ) : (
+                      !readOnly && (
+                        <QuizCreator
+                          courseId={courseId}
+                          lessonId={lesson.id}
+                          onCancel={() => setAddingQuizToLessonId(null)}
+                          onSuccess={() => {
+                            setAddingQuizToLessonId(null);
+                            fetchContent();
+                          }}
+                        />
+                      )
+                    )
+                  )}
+                  {viewingVideoLessonId === lesson.id && (
+                    <div className="mt-2 p-4 border rounded bg-gray-50">
+                      <div className="flex justify-between items-center mb-2">
+                        <h4 className="font-medium">Video Preview</h4>
+                        <button onClick={() => setViewingVideoLessonId(null)} className="text-gray-500 hover:text-gray-700">
+                          <CloseOutlined />
+                        </button>
+                      </div>
+                      <VideoPlayer
+                        lesson={{
+                          ...lesson,
+                          watched_s: 0,
+                          is_completed: false,
+                          assets: lesson.video_url ? [{
+                            id: 0,
+                            asset_kind: 'VIDEO',
+                            url: lesson.video_url,
+                            meta: {}
+                          }] : [],
+                          quiz: null
+                        }}
+                        onProgress={() => {}}
+                        onComplete={() => {}}
+                      />
+                    </div>
                   )}
                 </div>
               ))}
 
               {/* Add Lesson Form */}
-              {addingLessonToModuleId === module.id ? (
+              {!readOnly && addingLessonToModuleId === module.id ? (
                 <form onSubmit={(e) => handleAddLesson(module.id, e)} className="mt-2 p-3 border border-dashed rounded bg-gray-50">
                   <div className="space-y-2">
                     <input
@@ -311,15 +373,17 @@ export default function CourseContentManager({ courseId }: CourseContentManagerP
                   </div>
                 </form>
               ) : (
-                <button
-                  onClick={() => {
-                    setAddingLessonToModuleId(module.id);
-                    setLessonForm({ title: '', duration_s: 0, requires_quiz_pass: false, video_url: '' });
-                  }}
-                  className="w-full py-2 border border-dashed rounded text-gray-500 hover:bg-gray-50 hover:text-blue-600 transition-colors flex items-center justify-center gap-2"
-                >
-                  <PlusOutlined /> Add Lesson
-                </button>
+                !readOnly && (
+                  <button
+                    onClick={() => {
+                      setAddingLessonToModuleId(module.id);
+                      setLessonForm({ title: '', duration_s: 0, requires_quiz_pass: false, video_url: '' });
+                    }}
+                    className="w-full py-2 border border-dashed rounded text-gray-500 hover:bg-gray-50 hover:text-blue-600 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <PlusOutlined /> Add Lesson
+                  </button>
+                )
               )}
             </div>
           </div>
