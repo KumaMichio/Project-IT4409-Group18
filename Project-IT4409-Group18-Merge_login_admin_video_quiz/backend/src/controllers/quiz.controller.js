@@ -84,6 +84,28 @@ class QuizController {
       res.status(500).json({ message: 'Server error' });
     }
   }
+
+  async createQuiz(req, res) {
+    try {
+      const quizData = req.body;
+      const newQuiz = await quizService.createQuiz(quizData);
+      res.status(201).json(newQuiz);
+    } catch (error) {
+      console.error('Error creating quiz:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+
+  async deleteQuiz(req, res) {
+    try {
+      const { quizId } = req.params;
+      await quizService.deleteQuiz(quizId);
+      res.json({ message: 'Quiz deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting quiz:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
 }
 
 module.exports = new QuizController();

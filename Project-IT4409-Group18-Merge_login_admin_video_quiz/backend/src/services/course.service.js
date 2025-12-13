@@ -195,6 +195,38 @@ class CourseService {
     return courses.map(this._mapCourseToResponse);
   }
 
+  async getInstructorCourse(courseId, instructorId) {
+    const course = await courseRepository.getInstructorCourseById(courseId, instructorId);
+    if (!course) {
+      throw {
+        status: 404,
+        message: 'Course not found or you do not have permission to view it'
+      };
+    }
+    return this._mapCourseToResponse(course);
+  }
+
+  async getInstructorCourseContent(courseId, instructorId) {
+    // Verify ownership
+    const course = await courseRepository.getInstructorCourseById(courseId, instructorId);
+    if (!course) {
+      throw { status: 403, message: 'Not authorized' };
+    }
+
+    const [modules, lessons] = await Promise.all([
+      courseRepository.getModulesByCourseId(courseId),
+      courseRepository.getLessonsByCourseIdForInstructor(courseId)
+    ]);
+
+    // Organize data
+    const modulesWithLessons = modules.map(module => ({
+      ...module,
+      lessons: lessons.filter(l => l.module_id === module.id)
+    }));
+
+    return modulesWithLessons;
+  }
+
   async getCourseStudents(courseId, instructorId) {
     // Verify ownership logic should be here
     return courseRepository.getStudentsByCourseId(courseId);

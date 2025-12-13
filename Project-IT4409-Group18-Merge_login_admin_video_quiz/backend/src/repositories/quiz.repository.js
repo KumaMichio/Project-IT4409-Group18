@@ -109,6 +109,59 @@ class QuizRepository {
     );
     return result.rows;
   }
+
+  async createQuiz(quizData) {
+    const client = await db.connect();
+    try {
+      await client.query('BEGIN');
+
+      const { course_id, lesson_id, title, time_limit_s, attempts_allowed, pass_score, questions } = quizData;
+
+      const quizResult = await client.query(
+        `INSERT INTO quizzes (course_id, lesson_id, title, time_limit_s, attempts_allowed, pass_score)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id`,
+        [course_id, lesson_id, title, time_limit_s, attempts_allowed, pass_score]
+      );
+      const quizId = quizResult.rows[0].id;
+
+      if (questions && questions.length > 0) {
+        for (let i = 0; i < questions.length; i++) {
+          const q = questions[i];
+          const qResult = await client.query(
+            `INSERT INTO quiz_questions (quiz_id, question, qtype, position, points)
+             VALUES ($1, $2, $3, $4, $5)
+             RETURNING id`,
+            [quizId, q.question, q.qtype, i + 1, q.points || 1]
+          );
+          const qId = qResult.rows[0].id;
+
+          if (q.options && q.options.length > 0) {
+            for (let j = 0; j < q.options.length; j++) {
+              const opt = q.options[j];
+              await client.query(
+                `INSERT INTO quiz_options (question_id, option_text, is_correct, position)
+                 VALUES ($1, $2, $3, $4)`,
+                [qId, opt.option_text, opt.is_correct, j + 1]
+              );
+            }
+          }
+        }
+      }
+
+      await client.query('COMMIT');
+      return { id: quizId, ...quizData };
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  }
+
+  async deleteQuiz(quizId) {
+    await db.query('DELETE FROM quizzes WHERE id = $1', [quizId]);
+  }
 }
 
 module.exports = new QuizRepository();

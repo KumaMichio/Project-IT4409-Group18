@@ -1,5 +1,50 @@
 const lessonService = require('../services/lesson.service');
 
+const createLesson = async (req, res) => {
+  try {
+    const { moduleId } = req.params;
+    const instructorId = req.user.id;
+    const lesson = await lessonService.createLesson(moduleId, instructorId, req.body);
+    res.status(201).json(lesson);
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    console.error('Error creating lesson:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+const updateLesson = async (req, res) => {
+  try {
+    const { lessonId } = req.params;
+    const instructorId = req.user.id;
+    const lesson = await lessonService.updateLesson(lessonId, instructorId, req.body);
+    res.json(lesson);
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    console.error('Error updating lesson:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+const deleteLesson = async (req, res) => {
+  try {
+    const { lessonId } = req.params;
+    const instructorId = req.user.id;
+    await lessonService.deleteLesson(lessonId, instructorId);
+    res.json({ message: 'Lesson deleted' });
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    console.error('Error deleting lesson:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 // Update lesson progress (watched time)
 const updateLessonProgress = async (req, res) => {
   const { lessonId } = req.params;
@@ -33,5 +78,8 @@ const markLessonComplete = async (req, res) => {
 
 module.exports = {
   updateLessonProgress,
-  markLessonComplete
+  markLessonComplete,
+  createLesson,
+  updateLesson,
+  deleteLesson
 };

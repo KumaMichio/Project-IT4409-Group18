@@ -20,7 +20,7 @@ export default function CourseStudentsPage() {
       try {
         const [studentsData, courseData] = await Promise.all([
           courseApi.getCourseStudents(courseId),
-          courseApi.getCourse(courseId)
+          courseApi.getInstructorCourse(courseId)
         ]);
         setStudents(studentsData);
         setCourse(courseData);

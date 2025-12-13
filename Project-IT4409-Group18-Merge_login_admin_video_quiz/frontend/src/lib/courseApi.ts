@@ -44,7 +44,67 @@ export interface Student {
   progress: number;
 }
 
+export interface Module {
+  id: number;
+  title: string;
+  position: number;
+  lessons?: Lesson[];
+}
+
+export interface Lesson {
+  id: number;
+  title: string;
+  position: number;
+  duration_s: number;
+  requires_quiz_pass: boolean;
+  video_url?: string;
+  has_quiz?: boolean;
+}
+
 export const courseApi = {
+  // ... existing methods ...
+
+  // Module & Lesson Management
+  createModule: async (courseId: number, title: string): Promise<Module> => {
+    return apiFetch(`/api/courses/${courseId}/modules`, {
+      method: 'POST',
+      body: JSON.stringify({ title }),
+    });
+  },
+
+  updateModule: async (moduleId: number, title: string): Promise<Module> => {
+    return apiFetch(`/api/modules/${moduleId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ title }),
+    });
+  },
+
+  deleteModule: async (moduleId: number): Promise<void> => {
+    return apiFetch(`/api/modules/${moduleId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  createLesson: async (moduleId: number, data: { title: string; duration_s?: number; requires_quiz_pass?: boolean; video_url?: string }): Promise<Lesson> => {
+    return apiFetch(`/api/modules/${moduleId}/lessons`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateLesson: async (lessonId: number, data: { title?: string; duration_s?: number; requires_quiz_pass?: boolean; video_url?: string }): Promise<Lesson> => {
+    return apiFetch(`/api/lessons/${lessonId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteLesson: async (lessonId: number): Promise<void> => {
+    return apiFetch(`/api/lessons/${lessonId}`, {
+      method: 'DELETE',
+    });
+  },
+
   // Get all courses for the current instructor
   getMyCourses: async (): Promise<Course[]> => {
     return apiFetch('/api/courses/instructor/my-courses');
@@ -77,6 +137,24 @@ export const courseApi = {
   getCourseStudents: async (courseId: number): Promise<Student[]> => {
     return apiFetch(`/api/courses/${courseId}/students`);
   },
+
+  // Get course details for instructor (editing)
+  getInstructorCourse: async (courseId: number): Promise<Course> => {
+    const course = await apiFetch(`/api/courses/instructor/${courseId}`);
+    
+    // Map backend fields to frontend interface
+    return {
+      ...course,
+      price: course.price !== undefined ? course.price : (course.price_cents || 0),
+      thumbnail: course.thumbnail !== undefined ? course.thumbnail : (course.thumbnail_url || ''),
+      language: course.language !== undefined ? course.language : (course.lang || 'vi'),
+      status: course.status || (course.is_published ? 'published' : 'draft')
+    };
+  },
+
+  getInstructorCourseContent: async (courseId: number): Promise<Module[]> => {
+    return apiFetch(`/api/courses/instructor/${courseId}/content`);
+  },
   
   // Get course details
   getCourse: async (courseId: number): Promise<Course> => {
@@ -92,5 +170,19 @@ export const courseApi = {
       language: course.language !== undefined ? course.language : (course.lang || 'vi'),
       status: course.status || (course.is_published ? 'published' : 'draft')
     };
+  },
+
+  // Quiz Management
+  createQuiz: async (data: any): Promise<any> => {
+    return apiFetch('/api/quizzes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteQuiz: async (quizId: number): Promise<void> => {
+    return apiFetch(`/api/quizzes/${quizId}`, {
+      method: 'DELETE',
+    });
   }
 };

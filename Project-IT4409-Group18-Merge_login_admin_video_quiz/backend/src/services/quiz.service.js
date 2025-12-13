@@ -82,6 +82,14 @@ class QuizService {
   async getStudentAttempts(quizId, studentId) {
     return await quizRepository.getStudentAttempts(quizId, studentId);
   }
+
+  async createQuiz(quizData) {
+    return await quizRepository.createQuiz(quizData);
+  }
+
+  async deleteQuiz(quizId) {
+    return await quizRepository.deleteQuiz(quizId);
+  }
 }
 
 module.exports = new QuizService();

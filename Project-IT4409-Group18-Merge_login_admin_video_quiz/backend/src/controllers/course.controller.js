@@ -111,6 +111,38 @@ const getMyCourses = async (req, res) => {
   }
 };
 
+// Instructor: Get Single Course (for editing)
+const getInstructorCourse = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const instructorId = req.user.id;
+    const course = await courseService.getInstructorCourse(courseId, instructorId);
+    res.json(course);
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    console.error('Error fetching instructor course:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+// Instructor: Get Course Content (Modules & Lessons)
+const getInstructorCourseContent = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const instructorId = req.user.id;
+    const content = await courseService.getInstructorCourseContent(courseId, instructorId);
+    res.json(content);
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    console.error('Error fetching instructor course content:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 // Instructor: Get Course Students
 const getCourseStudents = async (req, res) => {
   try {
@@ -133,5 +165,7 @@ module.exports = {
   updateCourse,
   deleteCourse,
   getMyCourses,
+  getInstructorCourse,
+  getInstructorCourseContent,
   getCourseStudents
 };

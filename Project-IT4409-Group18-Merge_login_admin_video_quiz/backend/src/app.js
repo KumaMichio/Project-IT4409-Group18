@@ -24,6 +24,7 @@ function createExpressApp() {
   // Mount existing routes
   app.use('/api/courses', courseRoutes);
   app.use('/api/lessons', lessonRoutes);
+  app.use('/api/modules', require('./routes/module.routes')); // Direct access for update/delete
   app.use('/api/quizzes', quizRoutes);
 
   // Mount new routes

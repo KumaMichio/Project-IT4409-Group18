@@ -14,4 +14,10 @@ router.post('/:quizId/attempts/:attemptId/submit', quizController.submitAttempt)
 // Get student attempts
 router.get('/:quizId/attempts', quizController.getStudentAttempts);
 
+// Create quiz
+router.post('/', quizController.createQuiz);
+
+// Delete quiz
+router.delete('/:quizId', quizController.deleteQuiz);
+
 module.exports = router;

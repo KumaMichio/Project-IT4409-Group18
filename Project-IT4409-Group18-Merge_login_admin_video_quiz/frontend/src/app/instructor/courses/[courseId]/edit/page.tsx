@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { courseApi, UpdateCourseData } from '@/lib/courseApi';
 import Button from '@/components/common/Button';
+import CourseContentManager from '@/components/course/CourseContentManager';
 
 export default function EditCoursePage() {
   const router = useRouter();
@@ -27,7 +28,7 @@ export default function EditCoursePage() {
   useEffect(() => {
     const fetchCourse = async () => {
       try {
-        const course = await courseApi.getCourse(courseId);
+        const course = await courseApi.getInstructorCourse(courseId);
         setFormData({
           title: course.title,
           description: course.description,
@@ -196,6 +197,10 @@ export default function EditCoursePage() {
           </Button>
         </div>
       </form>
+
+      <div className="mt-8 bg-white p-6 rounded-lg shadow-sm border">
+        <CourseContentManager courseId={courseId} />
+      </div>
     </div>
   );
 }

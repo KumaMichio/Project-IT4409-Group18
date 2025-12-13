@@ -51,6 +51,23 @@ class CourseRepository {
     return result.rows;
   }
 
+  async getLessonsByCourseIdForInstructor(courseId) {
+    const result = await pool.query(
+      `SELECT 
+        l.id, l.module_id, l.title, l.position, l.duration_s, l.requires_quiz_pass,
+        la.url as video_url,
+        EXISTS(SELECT 1 FROM quizzes q WHERE q.lesson_id = l.id) as has_quiz
+       FROM lessons l
+       LEFT JOIN lesson_assets la ON l.id = la.lesson_id AND la.asset_kind = 'VIDEO'
+       WHERE l.module_id IN (
+         SELECT id FROM modules WHERE course_id = $1
+       )
+       ORDER BY l.position`,
+      [courseId]
+    );
+    return result.rows;
+  }
+
   async getAssetsByCourseId(courseId) {
     const result = await pool.query(
       `SELECT 
@@ -140,6 +157,20 @@ class CourseRepository {
        LEFT JOIN instructor_profiles ip ON u.id = ip.user_id
        WHERE c.id = $1 AND c.is_published = true`,
       [courseId]
+    );
+    return result.rows[0];
+  }
+
+  async getInstructorCourseById(courseId, instructorId) {
+    const result = await pool.query(
+      `SELECT 
+        c.id, c.title, c.description, c.thumbnail_url, c.price_cents, 
+        c.currency, c.lang, c.created_at, c.updated_at, c.is_published,
+        u.id as instructor_id, u.full_name as instructor_name
+       FROM courses c
+       JOIN users u ON c.instructor_id = u.id
+       WHERE c.id = $1 AND c.instructor_id = $2`,
+      [courseId, instructorId]
     );
     return result.rows[0];
   }
