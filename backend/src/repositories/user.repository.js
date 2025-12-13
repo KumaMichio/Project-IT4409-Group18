@@ -16,6 +16,7 @@ function mapRow(r) {
     email: r.email,
     passwordHash: r.password_hash,
     role: role || r.role, // Fallback về original nếu không map được
+    avatar_url: r.avatar_url,
   };
 }
 
@@ -73,7 +74,7 @@ async function createUser({ name, email, passwordHash, role = 'student' }) {
 
 async function findUserById(id) {
   const res = await pool.query(
-    'SELECT id, email, password_hash, full_name, role, is_active, created_at, updated_at FROM users WHERE id = $1 LIMIT 1',
+    'SELECT id, email, password_hash, full_name, role, avatar_url, is_active, created_at, updated_at FROM users WHERE id = $1 LIMIT 1',
     [id]
   );
   return mapRow(res.rows[0]);
@@ -82,7 +83,7 @@ async function findUserById(id) {
 async function getUsersByRole(role) {
   // Role phải là database enum: 'STUDENT', 'INSTRUCTOR', hoặc 'ADMIN'
   const res = await pool.query(
-    'SELECT id, email, full_name, role, is_active, created_at, updated_at FROM users WHERE role = $1 ORDER BY created_at DESC',
+    'SELECT id, email, full_name, role, avatar_url, is_active, created_at, updated_at FROM users WHERE role = $1 ORDER BY created_at DESC',
     [role]
   );
   return res.rows.map((r) => {

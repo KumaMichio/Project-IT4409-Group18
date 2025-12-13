@@ -312,6 +312,60 @@ CREATE TABLE IF NOT EXISTS dm_threads (
   UNIQUE (student_id, instructor_id)
 );
 
+-- Index cho bảng dm_threads
+CREATE INDEX IF NOT EXISTS idx_dm_threads_student_id ON dm_threads(student_id);
+CREATE INDEX IF NOT EXISTS idx_dm_threads_instructor_id ON dm_threads(instructor_id);
+
+-- Tạo bảng course_channels (channel chat cho mỗi course - UC13)
+CREATE TABLE IF NOT EXISTS course_channels (
+  id           BIGSERIAL PRIMARY KEY,
+  course_id    BIGINT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  name         TEXT NOT NULL DEFAULT 'General',
+  description  TEXT,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(course_id)
+);
+
+-- Index cho bảng course_channels
+CREATE INDEX IF NOT EXISTS idx_course_channels_course_id ON course_channels(course_id);
+
+-- Tạo bảng messages (tin nhắn trong course channel - UC13)
+CREATE TABLE IF NOT EXISTS messages (
+  id          BIGSERIAL PRIMARY KEY,
+  channel_id  BIGINT NOT NULL REFERENCES course_channels(id) ON DELETE CASCADE,
+  user_id     BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  content     TEXT NOT NULL,
+  edited_at   TIMESTAMPTZ,
+  deleted_at  TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Index cho bảng messages
+CREATE INDEX IF NOT EXISTS idx_messages_channel_id ON messages(channel_id);
+CREATE INDEX IF NOT EXISTS idx_messages_user_id ON messages(user_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_deleted_at ON messages(deleted_at) WHERE deleted_at IS NULL;
+
+-- Tạo bảng dm_messages (tin nhắn trong cuộc trò chuyện trực tiếp - UC14)
+CREATE TABLE IF NOT EXISTS dm_messages (
+  id          BIGSERIAL PRIMARY KEY,
+  thread_id   BIGINT NOT NULL REFERENCES dm_threads(id) ON DELETE CASCADE,
+  sender_id   BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  content     TEXT NOT NULL,
+  is_read     BOOLEAN NOT NULL DEFAULT FALSE,
+  read_at     TIMESTAMPTZ,
+  edited_at   TIMESTAMPTZ,
+  deleted_at  TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Index cho bảng dm_messages
+CREATE INDEX IF NOT EXISTS idx_dm_messages_thread_id ON dm_messages(thread_id);
+CREATE INDEX IF NOT EXISTS idx_dm_messages_sender_id ON dm_messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_dm_messages_created_at ON dm_messages(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_dm_messages_is_read ON dm_messages(is_read) WHERE is_read = FALSE;
+CREATE INDEX IF NOT EXISTS idx_dm_messages_deleted_at ON dm_messages(deleted_at) WHERE deleted_at IS NULL;
+
 -- ==== RECOMMENDATIONS ==== 
 -- Tạo bảng recommendations (gợi ý khóa học)
 CREATE TABLE IF NOT EXISTS recommendations (
