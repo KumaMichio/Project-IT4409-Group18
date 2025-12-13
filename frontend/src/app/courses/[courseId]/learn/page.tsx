@@ -8,12 +8,12 @@ import { VideoPlayer } from '../../../../components/course/VideoPlayer';
 import { LessonSidebar } from '../../../../components/course/LessonSidebar';
 import { LessonMeta } from '../../../../components/course/LessonMeta';
 import { Course, Lesson, Module } from '../../../../components/course/types';
-
-const STUDENT_ID = 1; // TODO: Get from auth context
+import { useAuth } from '../../../../hooks/useAuth';
 
 export default function CourseViewerPage() {
   const params = useParams();
   const courseId = params?.courseId as string;
+  const { user } = useAuth();
 
   const [course, setCourse] = useState<Course | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
@@ -45,7 +45,7 @@ export default function CourseViewerPage() {
 
   useEffect(() => {
     fetchCourseContent();
-  }, [courseId]);
+  }, [courseId, user?.id]);
 
   useEffect(() => {
     // Auto-play first video when course loads
@@ -60,9 +60,11 @@ export default function CourseViewerPage() {
 
 
   const fetchCourseContent = async () => {
+    if (!user?.id) return;
+    
     try {
       const response = await axios.get(
-        `${API_URL}/courses/${courseId}/content?studentId=${STUDENT_ID}`
+        `${API_URL}/courses/${courseId}/content?studentId=${user.id}`
       );
       setCourse(response.data.course);
       setModules(response.data.modules);
@@ -75,9 +77,11 @@ export default function CourseViewerPage() {
   };
 
   const saveProgress = async (lesson: Lesson, watchedSeconds: number) => {
+    if (!user?.id) return;
+    
     try {
       await axios.post(`${API_URL}/lessons/${lesson.id}/progress`, {
-        studentId: STUDENT_ID,
+        studentId: user.id,
         watchedSeconds
       });
 

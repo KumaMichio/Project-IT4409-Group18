@@ -2,30 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Button, Card, Radio, Space, Typography, Progress, message, Spin } from 'antd';
-import { ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
-import axios from 'axios';
-import { API_URL } from '../../../../../config/api';
+import { Button, Card, Space, Typography, Progress, message, Spin } from 'antd';
+import { ClockCircleOutlined } from '@ant-design/icons';
+import apiClient from '../../../../../lib/apiClient';
+import QuizQuestion, { QuizQuestionData } from '../../../../../components/quiz/QuizQuestion';
+import QuizResult from '../../../../../components/quiz/QuizResult';
+import { useAuth } from '../../../../../hooks/useAuth';
 
-const { Title, Paragraph, Text } = Typography;
-
-const STUDENT_ID = 1; // TODO: Get from auth context
-
-type QuizOption = {
-  id: number;
-  option_text: string;
-  is_correct: boolean;
-  position: number;
-};
-
-type QuizQuestion = {
-  id: number;
-  question: string;
-  qtype: string;
-  position: number;
-  points: number;
-  options: QuizOption[];
-};
+const { Title, Text } = Typography;
 
 type Quiz = {
   id: number;
@@ -33,12 +17,13 @@ type Quiz = {
   time_limit_s: number | null;
   attempts_allowed: number | null;
   pass_score: number;
-  questions: QuizQuestion[];
+  questions: QuizQuestionData[];
 };
 
 export default function QuizPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const courseId = params?.courseId as string;
   const quizId = params?.quizId as string;
 
@@ -51,8 +36,10 @@ export default function QuizPage() {
   const [attemptId, setAttemptId] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchQuiz();
-  }, [quizId]);
+    if (user?.id) {
+      fetchQuiz();
+    }
+  }, [quizId, user?.id]);
 
   useEffect(() => {
     if (timeLeft === null || timeLeft <= 0 || submitted) return;
@@ -72,24 +59,37 @@ export default function QuizPage() {
 
   const fetchQuiz = async () => {
     try {
-      const response = await axios.get(`${API_URL}/quizzes/${quizId}`);
+      const response = await apiClient.get(`/quizzes/${quizId}`);
       setQuiz(response.data);
       if (response.data.time_limit_s) {
         setTimeLeft(response.data.time_limit_s);
       }
       
       // Tạo quiz attempt
-      const attemptResponse = await axios.post(`${API_URL}/quizzes/${quizId}/attempts`, {
-        studentId: STUDENT_ID
+      if (!user?.id) {
+        message.error('Vui lòng đăng nhập để làm quiz');
+        router.push('/auth/login');
+        return;
+      }
+      console.log('Creating quiz attempt for quiz:', quizId, 'student:', user.id);
+      const attemptResponse = await apiClient.post(`/quizzes/${quizId}/attempts`, {
+        studentId: user.id
       });
+      console.log('Attempt created:', attemptResponse.data);
       setAttemptId(attemptResponse.data.attemptId);
     } catch (error: any) {
       console.error('Error fetching quiz:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      
       if (error.response?.status === 403) {
-        message.error('Bạn đã hết lượt làm bài quiz này');
+        message.error(error.response?.data?.message || 'Bạn đã hết lượt làm bài quiz này');
         router.push(`/courses/${courseId}/learn`);
+      } else if (error.response?.status === 401) {
+        message.error('Vui lòng đăng nhập để làm quiz');
+        router.push('/auth/login');
       } else {
-        message.error('Không thể tải quiz');
+        message.error(error.response?.data?.message || 'Không thể tải quiz');
       }
     } finally {
       setLoading(false);
@@ -111,7 +111,7 @@ export default function QuizPage() {
     }
 
     try {
-      const response = await axios.post(`${API_URL}/quizzes/${quizId}/attempts/${attemptId}/submit`, {
+      const response = await apiClient.post(`/quizzes/${quizId}/attempts/${attemptId}/submit`, {
         answers: Object.entries(answers).map(([questionId, answer]) => ({
           questionId: parseInt(questionId),
           selectedOptionIds: Array.isArray(answer) ? answer : [answer]
@@ -200,87 +200,27 @@ export default function QuizPage() {
           )}
 
           {submitted && (
-            <div className={`p-4 rounded-lg ${score >= quiz.pass_score ? 'bg-green-50' : 'bg-red-50'}`}>
-              <div className="flex items-center gap-3">
-                {score >= quiz.pass_score ? (
-                  <CheckCircleOutlined className="text-3xl text-green-600" />
-                ) : (
-                  <CloseCircleOutlined className="text-3xl text-red-600" />
-                )}
-                <div>
-                  <Text strong className="text-lg">
-                    {score >= quiz.pass_score ? 'Đạt!' : 'Chưa đạt'}
-                  </Text>
-                  <div>
-                    <Text>Điểm: {score}/{quiz.questions.reduce((sum, q) => sum + q.points, 0)}</Text>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <QuizResult
+              score={score}
+              totalPoints={quiz.questions.reduce((sum, q) => sum + q.points, 0)}
+              passScore={quiz.pass_score}
+              passed={score >= quiz.pass_score}
+            />
           )}
         </Card>
 
         {/* Questions */}
         <Space direction="vertical" size="large" className="w-full">
-          {quiz.questions.map((question, index) => {
-            const userAnswer = answers[question.id];
-            const isMultiChoice = question.qtype === 'MULTI_CHOICE';
-            
-            return (
-              <Card key={question.id} className="shadow-sm">
-                <div className="mb-4">
-                  <Text strong className="text-base">
-                    Câu {index + 1}: {question.question}
-                  </Text>
-                  {isMultiChoice && (
-                    <Text type="secondary" className="block mt-1 text-sm">
-                      (Chọn nhiều đáp án)
-                    </Text>
-                  )}
-                  <Text type="secondary" className="block mt-1 text-sm">
-                    ({question.points} điểm)
-                  </Text>
-                </div>
-
-                <Radio.Group
-                  value={userAnswer}
-                  onChange={(e) => handleChange(question.id, e.target.value)}
-                  disabled={submitted}
-                  className="w-full"
-                >
-                  <Space direction="vertical" className="w-full">
-                    {question.options.map(option => {
-                      const isSelected = Array.isArray(userAnswer) 
-                        ? userAnswer.includes(option.id)
-                        : userAnswer === option.id;
-                      const showCorrect = submitted && option.is_correct;
-                      const showWrong = submitted && isSelected && !option.is_correct;
-
-                      return (
-                        <div
-                          key={option.id}
-                          className={`p-3 rounded border ${
-                            showCorrect ? 'border-green-500 bg-green-50' :
-                            showWrong ? 'border-red-500 bg-red-50' :
-                            isSelected ? 'border-blue-500 bg-blue-50' :
-                            'border-gray-200'
-                          }`}
-                        >
-                          <Radio value={option.id} className="w-full">
-                            <span className={showCorrect ? 'text-green-700 font-medium' : showWrong ? 'text-red-700' : ''}>
-                              {option.option_text}
-                            </span>
-                            {showCorrect && <CheckCircleOutlined className="ml-2 text-green-600" />}
-                            {showWrong && <CloseCircleOutlined className="ml-2 text-red-600" />}
-                          </Radio>
-                        </div>
-                      );
-                    })}
-                  </Space>
-                </Radio.Group>
-              </Card>
-            );
-          })}
+          {quiz.questions.map((question, index) => (
+            <QuizQuestion
+              key={question.id}
+              question={question}
+              questionNumber={index + 1}
+              userAnswer={answers[question.id]}
+              submitted={submitted}
+              onChange={handleChange}
+            />
+          ))}
         </Space>
 
         {/* Submit Button */}

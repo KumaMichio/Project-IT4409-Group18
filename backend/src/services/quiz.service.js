@@ -13,11 +13,15 @@ class QuizService {
 
     // Check if student has exceeded attempt limit
     const attemptCount = await quizRepository.getAttemptCount(quizId, studentId);
+    console.log(`[SERVICE] Quiz: ${quiz.title}, Attempts allowed: ${quiz.attempts_allowed}, Current attempts: ${attemptCount}`);
+    
     if (quiz.attempts_allowed && attemptCount >= quiz.attempts_allowed) {
+      console.log(`[SERVICE] Attempt limit exceeded! ${attemptCount} >= ${quiz.attempts_allowed}`);
       throw new Error('Attempt limit exceeded');
     }
 
     const attemptNo = attemptCount + 1;
+    console.log(`[SERVICE] Creating attempt #${attemptNo}`);
     return await quizRepository.createAttempt(quizId, studentId, attemptNo);
   }
 

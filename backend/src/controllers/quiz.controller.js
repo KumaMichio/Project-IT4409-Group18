@@ -35,10 +35,12 @@ class QuizController {
       const { quizId } = req.params;
       const { studentId } = req.body;
 
+      console.log(`[CREATE ATTEMPT] QuizId: ${quizId}, StudentId: ${studentId}`);
       const attempt = await quizService.createAttempt(quizId, studentId);
+      console.log(`[CREATE ATTEMPT] Success:`, attempt);
       res.json({ attemptId: attempt.id, startedAt: attempt.started_at });
     } catch (error) {
-      console.error('Error creating attempt:', error);
+      console.error('[CREATE ATTEMPT] Error:', error.message);
       if (error.message === 'Attempt limit exceeded') {
         return res.status(403).json({ message: 'Bạn đã hết lượt làm bài' });
       }
