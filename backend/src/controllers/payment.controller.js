@@ -53,17 +53,32 @@ const createOrder = async (req, res) => {
     }
 
     // Generate payment URL for paid courses
-    const paymentUrl = paymentService.generatePaymentUrl(order, ipAddress);
+    // Note: SePay returns a Promise, VNPay returns synchronously
+    // SePay có thể trả về object { paymentUrl, qrCodeUrl } hoặc chỉ string paymentUrl
+    const paymentResult = await paymentService.generatePaymentUrl(order, ipAddress);
 
     console.log('Order created:', order.order_number, 'Payment URL generated');
 
-    res.json({
+    // Xử lý response: SePay có thể trả về object hoặc string
+    const responseData = {
       orderId: order.id,
       orderNumber: order.order_number,
-      paymentUrl,
       paymentId: payment.id,
       isFree: false
-    });
+    };
+
+    if (typeof paymentResult === 'object' && paymentResult.paymentUrl) {
+      // SePay trả về object với paymentUrl và qrCodeUrl
+      responseData.paymentUrl = paymentResult.paymentUrl;
+      if (paymentResult.qrCodeUrl) {
+        responseData.qrCodeUrl = paymentResult.qrCodeUrl;
+      }
+    } else {
+      // VNPay hoặc SePay chỉ trả về string
+      responseData.paymentUrl = paymentResult;
+    }
+
+    res.json(responseData);
   } catch (error) {
     if (error.status) {
       console.error('Payment service error:', error.message);
@@ -150,10 +165,107 @@ const getUserOrders = async (req, res) => {
   }
 };
 
+/**
+ * SePay return/callback handler
+ * GET /api/payments/sepay-return
+ * SePay redirect về đây sau khi thanh toán
+ */
+const sepayReturn = async (req, res) => {
+  try {
+    console.log('=== SePay Return Callback ===');
+    console.log('Query params:', req.query);
+    console.log('Query params keys:', Object.keys(req.query));
+    
+    // Nếu không có query params, có thể là SePay chưa redirect hoặc đang test
+    // Kiểm tra xem có orderNumber trong query không
+    if (Object.keys(req.query).length === 0) {
+      console.warn('⚠️  SePay return callback received with empty query params');
+      // Redirect về trang thanh toán với thông báo
+      const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payments/cancel?error=${encodeURIComponent('Chưa nhận được thông tin thanh toán từ SePay. Vui lòng kiểm tra lại.')}`;
+      return res.redirect(redirectUrl);
+    }
+    
+    const result = await paymentService.processSePayCallback(req.query);
+    
+    console.log('Payment processing result:', {
+      success: result.success,
+      orderNumber: result.order?.order_number,
+      alreadyProcessed: result.alreadyProcessed
+    });
+
+    if (result.success) {
+      // Redirect to success page
+      const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payments/success?orderNumber=${result.order.order_number}`;
+      console.log('Redirecting to success:', redirectUrl);
+      return res.redirect(redirectUrl);
+    } else {
+      // Redirect to cancel page
+      const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payments/cancel?orderNumber=${result.order.order_number}`;
+      console.log('Redirecting to cancel:', redirectUrl);
+      return res.redirect(redirectUrl);
+    }
+  } catch (error) {
+    console.error('SePay return error:', error);
+    console.error('Error stack:', error.stack);
+    
+    // Nếu lỗi "Order not found", có thể do SePay chưa gửi đúng params
+    // Hoặc order number không khớp
+    let errorMessage = error.message || 'Payment processing error';
+    if (error.status === 404 && error.message === 'Order not found') {
+      errorMessage = 'Không tìm thấy đơn hàng. Vui lòng kiểm tra lại hoặc liên hệ hỗ trợ.';
+    }
+    
+    const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payments/cancel?error=${encodeURIComponent(errorMessage)}`;
+    console.log('Redirecting to cancel with error:', redirectUrl);
+    return res.redirect(redirectUrl);
+  }
+};
+
+/**
+ * SePay webhook handler
+ * POST /api/payments/sepay-webhook
+ * SePay gọi endpoint này khi có update về payment
+ */
+const sepayWebhook = async (req, res) => {
+  try {
+    console.log('=== SePay Webhook Received ===');
+    console.log('Headers:', req.headers);
+    console.log('Body:', req.body);
+    
+    // Process webhook
+    const result = await paymentService.processSePayWebhook(req.body);
+    
+    console.log('Webhook processing result:', {
+      success: result.success,
+      orderNumber: result.order?.order_number,
+      alreadyProcessed: result.alreadyProcessed,
+      message: result.message
+    });
+
+    // SePay expects 200 OK response
+    res.status(200).json({ 
+      status: 'success',
+      message: result.message || 'Webhook processed successfully'
+    });
+  } catch (error) {
+    console.error('SePay webhook error:', error);
+    console.error('Error stack:', error.stack);
+    
+    // Trả về 200 để SePay không retry (hoặc 400 nếu muốn SePay retry)
+    const statusCode = error.status || 400;
+    res.status(statusCode).json({ 
+      status: 'error', 
+      message: error.message || 'Webhook processing failed' 
+    });
+  }
+};
+
 module.exports = {
   getCheckoutInfo,
   createOrder,
   vnpayReturn,
+  sepayReturn,
+  sepayWebhook,
   getOrderDetail,
   getUserOrders,
 };

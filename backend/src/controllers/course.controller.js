@@ -93,14 +93,45 @@ const getAllCourses = async (req, res) => {
     const limit = parseInt(req.query.limit) || 12;
     const keyword = req.query.q || req.query.keyword || '';
     
-    // If keyword is provided, search instead of getting all
+    // Parse filter params
+    const filters = {
+      priceRange: req.query.price_range || null, // 'free', 'under_100k', '100k_500k', '500k_1m', 'over_1m'
+      minRating: req.query.min_rating || null,    // '3.0', '3.5', '4.0', '4.5'
+      sortBy: req.query.sort_by || null,          // 'price', 'rating', 'date'
+      sortOrder: req.query.sort_order || 'desc'   // 'asc', 'desc'
+    };
+    
+    // Validate price_range
+    const validPriceRanges = ['free', 'under_100k', '100k_500k', '500k_1m', 'over_1m'];
+    if (filters.priceRange && !validPriceRanges.includes(filters.priceRange)) {
+      filters.priceRange = null;
+    }
+    
+    // Validate min_rating
+    const validRatings = ['3.0', '3.5', '4.0', '4.5'];
+    if (filters.minRating && !validRatings.includes(filters.minRating)) {
+      filters.minRating = null;
+    }
+    
+    // Validate sort_by
+    const validSortBy = ['price', 'rating', 'date'];
+    if (filters.sortBy && !validSortBy.includes(filters.sortBy)) {
+      filters.sortBy = null;
+    }
+    
+    // Validate sort_order
+    if (filters.sortOrder !== 'asc' && filters.sortOrder !== 'desc') {
+      filters.sortOrder = 'desc';
+    }
+    
+    // If keyword is provided, search with filters
     if (keyword && keyword.trim() !== '') {
-      const result = await courseService.searchCourses(keyword.trim(), page, limit);
+      const result = await courseService.searchCourses(keyword.trim(), page, limit, filters);
       return res.json(result);
     }
     
-    // No keyword, return all courses
-    const result = await courseService.getAllCourses(page, limit);
+    // No keyword, return all courses with filters
+    const result = await courseService.getAllCourses(page, limit, filters);
     res.json(result);
   } catch (error) {
     console.error('Error fetching all courses:', error);

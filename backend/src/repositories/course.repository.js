@@ -266,9 +266,83 @@ class CourseRepository {
     return result.rows;
   }
 
-  async getAllPublishedCourses(limit = 50, offset = 0) {
-    const result = await pool.query(
-      `SELECT 
+  /**
+   * Build price filter WHERE clause
+   * price_range: 'free', 'under_100k', '100k_500k', '500k_1m', 'over_1m'
+   */
+  buildPriceFilter(priceRange) {
+    if (!priceRange) return '';
+    
+    const priceFilters = {
+      'free': 'c.price_cents = 0',
+      'under_100k': 'c.price_cents > 0 AND c.price_cents < 100000',
+      '100k_500k': 'c.price_cents >= 100000 AND c.price_cents < 500000',
+      '500k_1m': 'c.price_cents >= 500000 AND c.price_cents < 1000000',
+      'over_1m': 'c.price_cents >= 1000000'
+    };
+    
+    return priceFilters[priceRange] || '';
+  }
+
+  /**
+   * Build rating filter WHERE clause
+   * minRating: 3.0, 3.5, 4.0, 4.5
+   */
+  buildRatingFilter(minRating) {
+    if (!minRating) return '';
+    return `COALESCE(AVG(cr.rating), 0) >= ${parseFloat(minRating)}`;
+  }
+
+  /**
+   * Build ORDER BY clause
+   * sortBy: 'price', 'rating', 'date'
+   * sortOrder: 'asc', 'desc'
+   */
+  buildOrderBy(sortBy, sortOrder = 'desc') {
+    const order = sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+    
+    const sortMappings = {
+      'price': `c.price_cents ${order}`,
+      'rating': `avg_rating ${order}`,
+      'date': `c.published_at ${order} NULLS LAST, c.created_at ${order}`
+    };
+    
+    if (sortBy && sortMappings[sortBy]) {
+      return sortMappings[sortBy];
+    }
+    
+    // Default: sort by date
+    return 'c.published_at DESC NULLS LAST, c.created_at DESC';
+  }
+
+  async getAllPublishedCourses(limit = 50, offset = 0, filters = {}) {
+    const { priceRange, minRating, sortBy, sortOrder } = filters;
+    
+    // Build WHERE conditions
+    const whereConditions = ['c.is_published = true'];
+    
+    // Add price filter
+    const priceFilter = this.buildPriceFilter(priceRange);
+    if (priceFilter) {
+      whereConditions.push(priceFilter);
+    }
+    
+    const whereClause = whereConditions.join(' AND ');
+    
+    // Build ORDER BY
+    const orderByClause = this.buildOrderBy(sortBy, sortOrder);
+    
+    // Build HAVING clause for rating filter (after GROUP BY)
+    const havingConditions = [];
+    if (minRating) {
+      havingConditions.push(`COALESCE(AVG(cr.rating), 0) >= ${parseFloat(minRating)}`);
+    }
+    const havingClause = havingConditions.length > 0 
+      ? `HAVING ${havingConditions.join(' AND ')}` 
+      : '';
+    
+    const query = `
+      SELECT 
         c.id, c.title, c.slug, c.description, c.thumbnail_url,
         c.price_cents, c.currency, c.created_at, c.published_at,
         u.id as instructor_id, u.full_name as instructor_name,
@@ -279,70 +353,174 @@ class CourseRepository {
       JOIN users u ON c.instructor_id = u.id
       LEFT JOIN enrollments e ON c.id = e.course_id AND e.status = 'ACTIVE'
       LEFT JOIN course_reviews cr ON c.id = cr.course_id
-      WHERE c.is_published = true
+      WHERE ${whereClause}
       GROUP BY c.id, u.id, u.full_name
-      ORDER BY c.published_at DESC NULLS LAST, c.created_at DESC
-      LIMIT $1 OFFSET $2`,
-      [limit, offset]
-    );
+      ${havingClause}
+      ORDER BY ${orderByClause}
+      LIMIT $1 OFFSET $2
+    `;
+    
+    const result = await pool.query(query, [limit, offset]);
     return result.rows;
   }
 
-  async countPublishedCourses() {
-    const result = await pool.query(
-      `SELECT COUNT(*) as total FROM courses WHERE is_published = true`
-    );
+  async countPublishedCourses(filters = {}) {
+    const { priceRange, minRating } = filters;
+    
+    // Build WHERE conditions
+    const whereConditions = ['c.is_published = true'];
+    
+    // Add price filter
+    const priceFilter = this.buildPriceFilter(priceRange);
+    if (priceFilter) {
+      whereConditions.push(priceFilter);
+    }
+    
+    const whereClause = whereConditions.join(' AND ');
+    
+    // If rating filter, need to use subquery with GROUP BY and HAVING
+    if (minRating) {
+      const query = `
+        SELECT COUNT(*) as total
+        FROM (
+          SELECT c.id
+          FROM courses c
+          JOIN users u ON c.instructor_id = u.id
+          LEFT JOIN course_reviews cr ON c.id = cr.course_id
+          WHERE ${whereClause}
+          GROUP BY c.id
+          HAVING COALESCE(AVG(cr.rating), 0) >= ${parseFloat(minRating)}
+        ) as filtered_courses
+      `;
+      const result = await pool.query(query);
+      return parseInt(result.rows[0].total);
+    }
+    
+    // No rating filter, simple count
+    const query = `SELECT COUNT(*) as total FROM courses c WHERE ${whereClause}`;
+    const result = await pool.query(query);
     return parseInt(result.rows[0].total);
   }
 
-  async searchCourses(keyword, limit = 50, offset = 0) {
+  async searchCourses(keyword, limit = 50, offset = 0, filters = {}) {
+    const { priceRange, minRating, sortBy, sortOrder } = filters;
     const searchTerm = `%${keyword}%`;
-    const result = await pool.query(
-      `SELECT 
-        c.id, c.title, c.slug, c.description, c.thumbnail_url,
-        c.price_cents, c.currency, c.created_at, c.published_at,
-        u.id as instructor_id, u.full_name as instructor_name,
-        COALESCE(AVG(cr.rating), 0) as avg_rating,
-        COUNT(DISTINCT e.id) as enrollment_count,
-        COUNT(DISTINCT cr.id) as review_count
-      FROM courses c
-      JOIN users u ON c.instructor_id = u.id
-      LEFT JOIN enrollments e ON c.id = e.course_id AND e.status = 'ACTIVE'
-      LEFT JOIN course_reviews cr ON c.id = cr.course_id
-      WHERE c.is_published = true
-        AND (
-          c.title ILIKE $1
-          OR c.description ILIKE $1
-          OR u.full_name ILIKE $1
-        )
-      GROUP BY c.id, u.id, u.full_name
-      ORDER BY 
+    
+    // Build WHERE conditions
+    const whereConditions = [
+      'c.is_published = true',
+      `(
+        c.title ILIKE $1
+        OR c.description ILIKE $1
+        OR u.full_name ILIKE $1
+      )`
+    ];
+    
+    // Add price filter
+    const priceFilter = this.buildPriceFilter(priceRange);
+    if (priceFilter) {
+      whereConditions.push(priceFilter);
+    }
+    
+    const whereClause = whereConditions.join(' AND ');
+    
+    // Build ORDER BY
+    // If no custom sort, use relevance-based sorting
+    let orderByClause;
+    if (sortBy) {
+      orderByClause = this.buildOrderBy(sortBy, sortOrder);
+    } else {
+      // Default: relevance first, then date
+      orderByClause = `
         CASE 
           WHEN c.title ILIKE $1 THEN 1
           WHEN c.description ILIKE $1 THEN 2
           ELSE 3
         END,
         c.published_at DESC NULLS LAST, c.created_at DESC
-      LIMIT $2 OFFSET $3`,
-      [searchTerm, limit, offset]
-    );
+      `;
+    }
+    
+    // Build HAVING clause for rating filter
+    const havingConditions = [];
+    if (minRating) {
+      havingConditions.push(`COALESCE(AVG(cr.rating), 0) >= ${parseFloat(minRating)}`);
+    }
+    const havingClause = havingConditions.length > 0 
+      ? `HAVING ${havingConditions.join(' AND ')}` 
+      : '';
+    
+    const query = `
+      SELECT 
+        c.id, c.title, c.slug, c.description, c.thumbnail_url,
+        c.price_cents, c.currency, c.created_at, c.published_at,
+        u.id as instructor_id, u.full_name as instructor_name,
+        COALESCE(AVG(cr.rating), 0) as avg_rating,
+        COUNT(DISTINCT e.id) as enrollment_count,
+        COUNT(DISTINCT cr.id) as review_count
+      FROM courses c
+      JOIN users u ON c.instructor_id = u.id
+      LEFT JOIN enrollments e ON c.id = e.course_id AND e.status = 'ACTIVE'
+      LEFT JOIN course_reviews cr ON c.id = cr.course_id
+      WHERE ${whereClause}
+      GROUP BY c.id, u.id, u.full_name
+      ${havingClause}
+      ORDER BY ${orderByClause}
+      LIMIT $2 OFFSET $3
+    `;
+    
+    const result = await pool.query(query, [searchTerm, limit, offset]);
     return result.rows;
   }
 
-  async countSearchResults(keyword) {
+  async countSearchResults(keyword, filters = {}) {
+    const { priceRange, minRating } = filters;
     const searchTerm = `%${keyword}%`;
-    const result = await pool.query(
-      `SELECT COUNT(DISTINCT c.id) as total
-       FROM courses c
-       JOIN users u ON c.instructor_id = u.id
-       WHERE c.is_published = true
-         AND (
-           c.title ILIKE $1
-           OR c.description ILIKE $1
-           OR u.full_name ILIKE $1
-         )`,
-      [searchTerm]
-    );
+    
+    // Build WHERE conditions
+    const whereConditions = [
+      'c.is_published = true',
+      `(
+        c.title ILIKE $1
+        OR c.description ILIKE $1
+        OR u.full_name ILIKE $1
+      )`
+    ];
+    
+    // Add price filter
+    const priceFilter = this.buildPriceFilter(priceRange);
+    if (priceFilter) {
+      whereConditions.push(priceFilter);
+    }
+    
+    const whereClause = whereConditions.join(' AND ');
+    
+    // If rating filter, need to use subquery with GROUP BY and HAVING
+    if (minRating) {
+      const query = `
+        SELECT COUNT(*) as total
+        FROM (
+          SELECT c.id
+          FROM courses c
+          JOIN users u ON c.instructor_id = u.id
+          LEFT JOIN course_reviews cr ON c.id = cr.course_id
+          WHERE ${whereClause}
+          GROUP BY c.id
+          HAVING COALESCE(AVG(cr.rating), 0) >= ${parseFloat(minRating)}
+        ) as filtered_courses
+      `;
+      const result = await pool.query(query, [searchTerm]);
+      return parseInt(result.rows[0].total);
+    }
+    
+    // No rating filter, simple count
+    const query = `
+      SELECT COUNT(DISTINCT c.id) as total
+      FROM courses c
+      JOIN users u ON c.instructor_id = u.id
+      WHERE ${whereClause}
+    `;
+    const result = await pool.query(query, [searchTerm]);
     return parseInt(result.rows[0].total);
   }
 

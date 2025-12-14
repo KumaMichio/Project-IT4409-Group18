@@ -166,10 +166,10 @@ class CourseService {
     return courses;
   }
 
-  async getAllCourses(page = 1, limit = 12) {
+  async getAllCourses(page = 1, limit = 12, filters = {}) {
     const offset = (page - 1) * limit;
-    const courses = await courseRepository.getAllPublishedCourses(limit, offset);
-    const total = await courseRepository.countPublishedCourses();
+    const courses = await courseRepository.getAllPublishedCourses(limit, offset, filters);
+    const total = await courseRepository.countPublishedCourses(filters);
     
     return {
       courses,
@@ -182,17 +182,17 @@ class CourseService {
     };
   }
 
-  async searchCourses(keyword, page = 1, limit = 12) {
+  async searchCourses(keyword, page = 1, limit = 12, filters = {}) {
     // Ensure keyword is not empty
     const trimmedKeyword = keyword ? keyword.trim() : '';
     if (!trimmedKeyword || trimmedKeyword === '') {
-      // If no keyword, return all courses
-      return this.getAllCourses(page, limit);
+      // If no keyword, return all courses with filters
+      return this.getAllCourses(page, limit, filters);
     }
 
     const offset = (page - 1) * limit;
-    const courses = await courseRepository.searchCourses(trimmedKeyword, limit, offset);
-    const total = await courseRepository.countSearchResults(trimmedKeyword);
+    const courses = await courseRepository.searchCourses(trimmedKeyword, limit, offset, filters);
+    const total = await courseRepository.countSearchResults(trimmedKeyword, filters);
     
     return {
       courses,

@@ -5,9 +5,12 @@
   "type": "commonjs",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "ngrok:update": "node scripts/update-ngrok-url.js",
+    "ngrok:start": "node scripts/start-ngrok.js"
   },
   "dependencies": {
+    "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -15,6 +18,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.0.2",
     "pg": "^8.11.3",
+    "qs": "^6.14.0",
     "socket.io": "^4.7.5"
   },
   "devDependencies": {
