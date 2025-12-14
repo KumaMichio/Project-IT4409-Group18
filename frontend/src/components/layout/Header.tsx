@@ -9,13 +9,28 @@ import { SearchDropdown } from './SearchDropdown';
 import { CartIcon } from '@/components/cart/CartIcon';
 import { CartDropdown } from '@/components/cart/CartDropdown';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+// Helper function to get full avatar URL
+const getAvatarUrl = (avatarUrl?: string) => {
+  if (!avatarUrl) return null;
+  if (avatarUrl.startsWith('http')) return avatarUrl;
+  // Static files are served from /uploads (not /api/uploads)
+  const baseUrl = API_BASE_URL.replace('/api', '');
+  const fullUrl = `${baseUrl}${avatarUrl}`;
+  // Add timestamp to bust browser cache
+  return `${fullUrl}?t=${Date.now()}`;
+};
+
 export function Header() {
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuth();
   const [searchKeyword, setSearchKeyword] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const keyword = e.target.value;
@@ -48,6 +63,7 @@ export function Header() {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsSearchOpen(false);
+        setIsProfileDropdownOpen(false);
         searchInputRef.current?.blur();
       }
     };
@@ -55,6 +71,22 @@ export function Header() {
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, []);
+
+  // Close profile dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+
+    if (isProfileDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProfileDropdownOpen]);
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
@@ -132,20 +164,91 @@ export function Header() {
               </div>
             )}
 
-            {/* Auth Buttons */}
+            {/* Auth Buttons / User Avatar */}
             <div className="flex items-center gap-3">
               {isAuthenticated ? (
-                <>
-                  <span className="text-gray-700 font-medium text-sm hidden sm:block">
-                    {user?.name}
-                  </span>
+                <div className="relative" ref={profileDropdownRef}>
+                  {/* Avatar */}
                   <button
-                    onClick={logout}
-                    className="px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-full font-medium hover:bg-gray-50 transition text-sm"
+                    onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                    onMouseEnter={() => setIsProfileDropdownOpen(true)}
+                    className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold text-sm hover:shadow-lg transition-all duration-200 hover:scale-105"
                   >
-                    Đăng xuất
+                    {user?.avatar_url && getAvatarUrl(user.avatar_url) ? (
+                      <img
+                        key={user.avatar_url}
+                        src={getAvatarUrl(user.avatar_url)!}
+                        alt={user.name}
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      <span>{user?.name?.charAt(0).toUpperCase()}</span>
+                    )}
                   </button>
-                </>
+
+                  {/* Dropdown Menu */}
+                  {isProfileDropdownOpen && (
+                    <div
+                      onMouseLeave={() => setIsProfileDropdownOpen(false)}
+                      className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
+                    >
+                      {/* User Info */}
+                      <div className="px-4 py-3 border-b border-gray-200">
+                        <p className="text-sm font-semibold text-gray-900">{user?.name}</p>
+                        <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                      </div>
+
+                      {/* Menu Items */}
+                      <Link
+                        href="/my-courses"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                        Khóa học của tôi
+                      </Link>
+
+                      <Link
+                        href="/cart"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        Giỏ hàng
+                      </Link>
+
+                      <Link
+                        href="/profile"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        Chỉnh sửa hồ sơ
+                      </Link>
+
+                      <div className="border-t border-gray-200 mt-2 pt-2">
+                        <button
+                          onClick={() => {
+                            setIsProfileDropdownOpen(false);
+                            logout();
+                          }}
+                          className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                          </svg>
+                          Đăng xuất
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <>
                   <Link href="/auth/register">

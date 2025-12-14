@@ -10,6 +10,7 @@ export interface User {
   name: string;
   email: string;
   role: 'student' | 'teacher' | 'admin';
+  avatar_url?: string;
 }
 
 /**

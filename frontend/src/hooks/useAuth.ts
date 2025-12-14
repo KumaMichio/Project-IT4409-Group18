@@ -35,14 +35,27 @@ export function useAuth() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  // Load user from localStorage on mount
+  // Load user from localStorage on mount and sync with server
   useEffect(() => {
-    const token = getToken();
-    const userData = getUser();
-    if (token && userData) {
-      setUser(userData);
-    }
-    setIsLoading(false);
+    const initAuth = async () => {
+      const token = getToken();
+      const userData = getUser();
+      if (token && userData) {
+        setUser(userData);
+        // Sync with server to get latest data (including avatar_url)
+        try {
+          const response = await apiClient.get<{ user: User }>('/auth/me');
+          const freshUserData = response.data.user;
+          saveUser(freshUserData);
+          setUser(freshUserData);
+        } catch (err) {
+          // Keep cached data if sync fails
+        }
+      }
+      setIsLoading(false);
+    };
+    
+    initAuth();
   }, []);
 
   /**

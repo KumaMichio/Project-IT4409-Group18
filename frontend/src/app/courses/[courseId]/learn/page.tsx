@@ -100,8 +100,15 @@ export default function CourseViewerPage() {
     }
   };
 
-  const saveProgress = async (lesson: Lesson, watchedSeconds: number) => {
+  const saveProgress = async (lesson: Lesson, watchedSeconds: number, forceComplete = false) => {
     if (!user?.id) return;
+    
+    console.log('💾 saveProgress called:');
+    console.log('  - lesson:', lesson.title);
+    console.log('  - watchedSeconds:', watchedSeconds);
+    console.log('  - forceComplete:', forceComplete);
+    console.log('  - lesson.duration_s:', lesson.duration_s);
+    console.log('  - lesson.is_completed:', lesson.is_completed);
     
     try {
       await apiClient.post(`/lessons/${lesson.id}/progress`, {
@@ -110,10 +117,16 @@ export default function CourseViewerPage() {
 
       const duration = lesson.duration_s || 0;
       const alreadyCompleted = lesson.is_completed;
-      const isCompleted = alreadyCompleted || (duration > 0 ? watchedSeconds >= duration * 0.9 : alreadyCompleted);
+      // Force complete if explicitly requested (video ended) or if watched >= 90%
+      const isCompleted = alreadyCompleted || forceComplete || (duration > 0 ? watchedSeconds >= duration * 0.9 : alreadyCompleted);
+      
+      console.log('  - 90% threshold:', duration * 0.9);
+      console.log('  - isCompleted:', isCompleted);
+      console.log('  - Calling updateLessonState...');
+      
       updateLessonState(lesson.id, watchedSeconds, isCompleted);
     } catch (error) {
-      console.error('Error saving progress:', error);
+      console.error('❌ Error saving progress:', error);
     }
   };
 
@@ -128,15 +141,26 @@ export default function CourseViewerPage() {
   };
 
   const handleProgress = useCallback((watchedSeconds: number) => {
+    console.log('⏱️ handleProgress:', watchedSeconds);
     const lesson = currentLessonRef.current;
-    if (!lesson) return;
-    saveProgress(lesson, watchedSeconds);
+    console.log('  - currentLessonRef.current:', lesson);
+    if (!lesson) {
+      console.warn('  ⚠️ No current lesson in handleProgress!');
+      return;
+    }
+    saveProgress(lesson, watchedSeconds, false);
   }, []);
 
   const handleComplete = useCallback((watchedSeconds: number) => {
+    console.log('✅ handleComplete called:', watchedSeconds);
     const lesson = currentLessonRef.current;
-    if (!lesson) return;
-    saveProgress(lesson, watchedSeconds);
+    console.log('  - currentLessonRef.current:', lesson);
+    if (!lesson) {
+      console.warn('  ⚠️ No current lesson in handleComplete!');
+      return;
+    }
+    // Force complete when video ends
+    saveProgress(lesson, watchedSeconds, true);
   }, []);
 
   const selectLesson = (lesson: Lesson) => {

@@ -2,14 +2,13 @@
 
 import {
   CheckCircleTwoTone,
-  
+  CheckCircleOutlined,
   ClockCircleOutlined,
   FileTextOutlined,
   LinkOutlined,
   FormOutlined,
   LockOutlined,
   DownOutlined,
-  MinusCircleOutlined
 } from '@ant-design/icons';
 import { Module, Lesson } from './types';
 
@@ -78,7 +77,7 @@ export function LessonSidebar({
                       {lesson.is_completed ? (
                         <CheckCircleTwoTone twoToneColor="#52c41a" />
                       ) : (
-                        <MinusCircleOutlined className="text-gray-400" />
+                        <CheckCircleOutlined className="text-gray-400" />
                       )}
                     </div>
 

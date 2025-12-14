@@ -22,14 +22,14 @@ function mapRow(r) {
 
 async function getUsers() {
   const res = await pool.query(
-    'SELECT id, email, password_hash, full_name, role FROM users ORDER BY id'
+    'SELECT id, email, password_hash, full_name, role, avatar_url FROM users ORDER BY id'
   );
   return res.rows.map(mapRow);
 }
 
 async function findUserByEmail(email) {
   const res = await pool.query(
-    'SELECT id, email, password_hash, full_name, role FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1',
+    'SELECT id, email, password_hash, full_name, role, avatar_url FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1',
     [email]
   );
   return mapRow(res.rows[0]);
