@@ -28,12 +28,34 @@ async function getAdminRevenueByCourse(from, to) {
 
 async function getInstructorRevenue(instructorId, from, to) {
   const range = normalizeDateRange(from, to);
-  const data = await revenueModel.getRevenueByInstructorCourses(
+  const courses = await revenueModel.getRevenueByInstructorCourses(
     instructorId,
     range.from,
     range.to
   );
-  return { from: range.from, to: range.to, data };
+  
+  // Calculate totals from courses array
+  const total_revenue = courses.reduce((sum, course) => {
+    return sum + parseFloat(course.total_revenue || 0);
+  }, 0);
+  
+  const total_students = courses.reduce((sum, course) => {
+    return sum + parseInt(course.total_students || 0);
+  }, 0);
+  
+  // Format courses array to match frontend expectation
+  const formattedCourses = courses.map(course => ({
+    course_id: course.course_id,
+    title: course.course_title,
+    revenue: course.total_revenue ? String(course.total_revenue) : '0',
+    students: parseInt(course.total_students || 0)
+  }));
+  
+  return {
+    total_revenue: String(total_revenue),
+    total_students: total_students,
+    courses: formattedCourses
+  };
 }
 
 module.exports = {

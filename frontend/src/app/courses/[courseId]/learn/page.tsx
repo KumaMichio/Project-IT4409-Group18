@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import apiClient from '../../../../lib/apiClient';
 import { VideoPlayer } from '../../../../components/course/VideoPlayer';
 import { LessonSidebar } from '../../../../components/course/LessonSidebar';
@@ -11,6 +11,8 @@ import { useAuth } from '../../../../hooks/useAuth';
 
 export default function CourseViewerPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const courseId = params?.courseId as string;
   const { user } = useAuth();
 
@@ -47,15 +49,36 @@ export default function CourseViewerPage() {
   }, [courseId, user?.id]);
 
   useEffect(() => {
-    // Auto-play first video when course loads
+    // Auto-play specified lesson or first video when course loads
     if (modules.length > 0 && !currentLesson) {
-      const firstLesson = modules[0].lessons[0];
-      if (firstLesson) {
-        setCurrentLesson(firstLesson);
-        setExpandedModules(new Set([modules[0].id]));
+      const lessonIdParam = searchParams?.get('lessonId');
+      let targetLesson: Lesson | null = null;
+      
+      if (lessonIdParam) {
+        // Try to find the specified lesson
+        for (const module of modules) {
+          const lesson = module.lessons.find(l => l.id === parseInt(lessonIdParam));
+          if (lesson) {
+            targetLesson = lesson;
+            setExpandedModules(new Set([module.id]));
+            break;
+          }
+        }
+      }
+      
+      // If no specific lesson found or no lessonId param, use first lesson
+      if (!targetLesson) {
+        targetLesson = modules[0]?.lessons[0] || null;
+        if (targetLesson && modules[0]) {
+          setExpandedModules(new Set([modules[0].id]));
+        }
+      }
+      
+      if (targetLesson) {
+        setCurrentLesson(targetLesson);
       }
     }
-  }, [modules]);
+  }, [modules, searchParams]);
 
 
   const fetchCourseContent = async () => {
@@ -135,7 +158,7 @@ export default function CourseViewerPage() {
       <div className="flex-1 flex flex-col">
         <div className="bg-gray-800 p-4 flex items-center gap-4">
           <button
-            onClick={() => window.history.back()}
+            onClick={() => router.push(`/courses/${courseId}`)}
             className="text-white hover:text-gray-300"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

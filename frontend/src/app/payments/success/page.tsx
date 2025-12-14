@@ -34,6 +34,19 @@ export default function PaymentSuccessPage() {
     }
   }, [orderNumber, getOrderByOrderNumber]);
 
+  // Auto-redirect to first course after successful payment
+  useEffect(() => {
+    if (order && order.items && order.items.length > 0) {
+      // Redirect to the first course's learn page after a short delay to show success message
+      const firstCourseId = order.items[0].course_id;
+      const timer = setTimeout(() => {
+        router.push(`/courses/${firstCourseId}/learn`);
+      }, 1500); // Wait 1.5 seconds to show success message
+
+      return () => clearTimeout(timer);
+    }
+  }, [order, router]);
+
   if (!orderNumber) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -131,18 +144,41 @@ export default function PaymentSuccessPage() {
           )}
 
           {/* Actions */}
-          <div className="border-t border-gray-200 pt-6 flex gap-4">
-            <Link href="/courses" className="flex-1">
-              <button className="w-full border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition">
-                Tiếp tục mua sắm
-              </button>
-            </Link>
-            <Link href="/dashboard/student" className="flex-1">
-              <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition">
-                Xem khóa học của tôi
-              </button>
-            </Link>
-          </div>
+          {order && order.items && order.items.length > 0 ? (
+            <div className="border-t border-gray-200 pt-6 flex gap-4">
+              <Link href="/courses" className="flex-1">
+                <button className="w-full border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition">
+                  Tiếp tục mua sắm
+                </button>
+              </Link>
+              <Link href={`/courses/${order.items[0].course_id}/learn`} className="flex-1">
+                <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition flex items-center justify-center gap-2">
+                  <PlayCircleOutlined />
+                  <span>Vào học ngay</span>
+                </button>
+              </Link>
+            </div>
+          ) : (
+            <div className="border-t border-gray-200 pt-6 flex gap-4">
+              <Link href="/courses" className="flex-1">
+                <button className="w-full border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition">
+                  Tiếp tục mua sắm
+                </button>
+              </Link>
+              <Link href="/my-courses" className="flex-1">
+                <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition">
+                  Xem khóa học của tôi
+                </button>
+              </Link>
+            </div>
+          )}
+
+          {/* Auto-redirect notice */}
+          {order && order.items && order.items.length > 0 && (
+            <div className="mt-4 text-center text-sm text-gray-500">
+              <p>Đang chuyển hướng đến khóa học trong vài giây...</p>
+            </div>
+          )}
         </div>
       </main>
     </div>

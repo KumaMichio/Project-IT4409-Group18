@@ -103,38 +103,9 @@ export default function CourseDetailPage() {
   const fetchCourseDetail = async () => {
     try {
       // Get course detail - token will be sent automatically via apiClient
+      // This now includes modules and lessons for all users
       const detailResponse = await apiClient.get(`/courses/${courseId}`);
-      
-      // If enrolled, fetch detailed content with lessons
-      if (detailResponse.data.enrollment.enrolled) {
-        try {
-          // Get course content - requires authentication
-          const contentResponse = await apiClient.get(`/courses/${courseId}/content`);
-          
-          // Merge content data with detail data
-          const modulesWithLessons = detailResponse.data.modules.map((module: Module) => {
-            const moduleContent = contentResponse.data.modules.find(
-              (m: any) => m.id === module.id
-            );
-            return {
-              ...module,
-              lessons: moduleContent?.lessons || []
-            };
-          });
-          
-          setCourseDetail({
-            ...detailResponse.data,
-            modules: modulesWithLessons
-          });
-        } catch (contentError) {
-          console.error('Error fetching course content:', contentError);
-          // Still show course detail even if content fails
-          setCourseDetail(detailResponse.data);
-        }
-      } else {
-        // Not enrolled - just show modules without lessons
-        setCourseDetail(detailResponse.data);
-      }
+      setCourseDetail(detailResponse.data);
     } catch (error) {
       console.error('Error fetching course detail:', error);
       alert('Không thể tải thông tin khóa học');
@@ -519,11 +490,7 @@ export default function CourseDetailPage() {
                 {formatDuration(course.total_duration_s)}
               </div>
 
-              {!enrollment.enrolled ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p>Vui lòng đăng ký khóa học để xem nội dung chi tiết</p>
-                </div>
-              ) : modules.length === 0 ? (
+              {modules.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <p>Đang tải nội dung khóa học...</p>
                 </div>
@@ -533,7 +500,7 @@ export default function CourseDetailPage() {
                   const isExpanded = expandedModules.has(module.id);
                   const hasLessons = module.lessons && module.lessons.length > 0;
                   const totalLessons = module.lessons?.length || 0;
-                  const totalDuration = module.lessons?.reduce((sum, lesson) => sum + lesson.duration_s, 0) || 0;
+                  const totalDuration = module.lessons?.reduce((sum, lesson) => sum + (lesson.duration_s || 0), 0) || 0;
                   
                   return (
                     <div key={module.id} className="border border-gray-300 rounded overflow-hidden">
@@ -566,12 +533,38 @@ export default function CourseDetailPage() {
                           {module.lessons.map((lesson) => (
                             <div 
                               key={lesson.id} 
-                              className="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer border-b border-gray-200 last:border-b-0"
+                              onClick={() => {
+                                if (enrollment.enrolled) {
+                                  // Navigate to learning page with the lesson
+                                  router.push(`/courses/${courseId}/learn?lessonId=${lesson.id}`);
+                                } else {
+                                  // Show message to enroll
+                                  toast.warning('Vui lòng đăng ký khóa học để xem bài học này');
+                                }
+                              }}
+                              className={`px-4 py-3 flex items-center gap-3 border-b border-gray-200 last:border-b-0 ${
+                                enrollment.enrolled 
+                                  ? 'hover:bg-gray-50 cursor-pointer' 
+                                  : 'cursor-not-allowed opacity-75'
+                              }`}
                             >
-                              <PlayCircleOutlined className="text-xl flex-shrink-0" style={{ color: '#00ADEF' }} />
-                              <span className="hover:underline font-medium" style={{ color: '#00ADEF' }}>
+                              <PlayCircleOutlined 
+                                className="text-xl flex-shrink-0" 
+                                style={{ color: enrollment.enrolled ? '#00ADEF' : '#9CA3AF' }} 
+                              />
+                              <span 
+                                className={`font-medium ${
+                                  enrollment.enrolled ? 'hover:underline' : ''
+                                }`}
+                                style={{ color: enrollment.enrolled ? '#00ADEF' : '#9CA3AF' }}
+                              >
                                 {lesson.title}
                               </span>
+                              {!enrollment.enrolled && (
+                                <span className="ml-auto text-xs text-gray-400">
+                                  🔒
+                                </span>
+                              )}
                             </div>
                           ))}
                         </div>

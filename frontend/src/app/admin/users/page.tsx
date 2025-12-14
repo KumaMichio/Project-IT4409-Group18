@@ -46,8 +46,8 @@ export default function AdminUsersPage() {
     try {
       setIsLoading(true);
       const [instructorsRes, studentsRes] = await Promise.all([
-        apiFetch('/admin/users/role/teacher'),
-        apiFetch('/admin/users/role/student'),
+        apiFetch('/api/admin/users/role/teacher'),
+        apiFetch('/api/admin/users/role/student'),
       ]);
       setInstructors(instructorsRes);
       setStudents(studentsRes);
@@ -117,13 +117,13 @@ export default function AdminUsersPage() {
         if (formData.password) {
           updateData.password = formData.password;
         }
-        await apiFetch(`/admin/users/${editingUser.id}`, {
+        await apiFetch(`/api/admin/users/${editingUser.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updateData),
         });
       } else {
-        await apiFetch('/admin/users', {
+        await apiFetch('/api/admin/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData),
@@ -142,7 +142,7 @@ export default function AdminUsersPage() {
     }
 
     try {
-      await apiFetch(`/admin/users/${user.id}`, {
+      await apiFetch(`/api/admin/users/${user.id}`, {
         method: 'DELETE',
       });
       fetchUsers();
@@ -153,7 +153,7 @@ export default function AdminUsersPage() {
 
   const handleToggleActive = async (user: User) => {
     try {
-      await apiFetch(`/admin/users/${user.id}`, {
+      await apiFetch(`/api/admin/users/${user.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: !user.is_active }),

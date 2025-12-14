@@ -51,6 +51,21 @@ class CourseRepository {
     return result.rows;
   }
 
+  // Get lessons by course ID without student progress (for public view)
+  async getLessonsByCourseIdPublic(courseId) {
+    const result = await pool.query(
+      `SELECT 
+        l.id, l.module_id, l.title, l.position, l.duration_s, l.requires_quiz_pass
+       FROM lessons l
+       WHERE l.module_id IN (
+         SELECT id FROM modules WHERE course_id = $1
+       )
+       ORDER BY l.position`,
+      [courseId]
+    );
+    return result.rows;
+  }
+
   async getAssetsByCourseId(courseId) {
     const result = await pool.query(
       `SELECT 

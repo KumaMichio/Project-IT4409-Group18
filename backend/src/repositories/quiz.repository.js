@@ -48,13 +48,49 @@ class QuizRepository {
   }
 
   async getAttemptCount(quizId, studentId) {
+    // Count all submitted attempts
     const result = await db.query(
       `SELECT COUNT(*) as count
        FROM quiz_attempts
-       WHERE quiz_id = $1 AND student_id = $2`,
+       WHERE quiz_id = $1 AND student_id = $2 AND submitted_at IS NOT NULL`,
       [quizId, studentId]
     );
     return parseInt(result.rows[0].count);
+  }
+
+  // Check if student has any passed attempt
+  async hasPassedAttempt(quizId, studentId) {
+    const result = await db.query(
+      `SELECT COUNT(*) as count
+       FROM quiz_attempts
+       WHERE quiz_id = $1 AND student_id = $2 AND submitted_at IS NOT NULL AND passed = true`,
+      [quizId, studentId]
+    );
+    return parseInt(result.rows[0].count) > 0;
+  }
+
+  // Count passed attempts (for limit checking after passing)
+  async getPassedAttemptCount(quizId, studentId) {
+    const result = await db.query(
+      `SELECT COUNT(*) as count
+       FROM quiz_attempts
+       WHERE quiz_id = $1 AND student_id = $2 AND submitted_at IS NOT NULL AND passed = true`,
+      [quizId, studentId]
+    );
+    return parseInt(result.rows[0].count);
+  }
+
+  // Get pending attempt (not yet submitted) for a student
+  async getPendingAttempt(quizId, studentId) {
+    const result = await db.query(
+      `SELECT id, attempt_no, started_at
+       FROM quiz_attempts
+       WHERE quiz_id = $1 AND student_id = $2 AND submitted_at IS NULL
+       ORDER BY started_at DESC
+       LIMIT 1`,
+      [quizId, studentId]
+    );
+    return result.rows[0] || null;
   }
 
   async createAttempt(quizId, studentId, attemptNo) {

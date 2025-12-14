@@ -94,13 +94,40 @@ class CourseService {
     let enrollment = null;
     let modules = [];
     
+    // Always get modules and lessons (for public view)
+    const modulesList = await courseRepository.getModulesByCourseId(courseId);
+    
     if (studentId) {
       enrollment = await courseRepository.checkStudentEnrollment(courseId, studentId);
       
-      // Only return modules if user is enrolled
+      // If enrolled, get lessons with progress
       if (enrollment && enrollment.status === 'ACTIVE') {
-        modules = await courseRepository.getModulesByCourseId(courseId);
+        const lessons = await courseRepository.getLessonsByCourseId(courseId, studentId);
+        
+        // Organize modules with lessons
+        modules = modulesList.map(module => ({
+          ...module,
+          lessons: lessons.filter(l => l.module_id === module.id)
+        }));
+      } else {
+        // Not enrolled, get lessons without progress
+        const lessons = await courseRepository.getLessonsByCourseIdPublic(courseId);
+        
+        // Organize modules with lessons
+        modules = modulesList.map(module => ({
+          ...module,
+          lessons: lessons.filter(l => l.module_id === module.id)
+        }));
       }
+    } else {
+      // Not logged in, get lessons without progress
+      const lessons = await courseRepository.getLessonsByCourseIdPublic(courseId);
+      
+      // Organize modules with lessons
+      modules = modulesList.map(module => ({
+        ...module,
+        lessons: lessons.filter(l => l.module_id === module.id)
+      }));
     }
 
     return {
@@ -111,7 +138,7 @@ class CourseService {
         total_duration_s: parseInt(stats.total_duration_s) || 0,
         total_modules: parseInt(stats.total_modules) || 0
       },
-      modules, // Empty array if not enrolled
+      modules, // Always returned with lessons
       rating: {
         average: parseFloat(rating.average_rating).toFixed(1),
         total_reviews: parseInt(rating.total_reviews) || 0,

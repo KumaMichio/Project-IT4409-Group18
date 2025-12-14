@@ -25,7 +25,7 @@ export default function InstructorRevenuePage() {
   const fetchRevenue = async () => {
     try {
       setIsLoading(true);
-      const response = await apiFetch('/api/revenue/instructor');
+      const response = await apiFetch('/api/revenue/instructor/my-courses');
       setData(response);
     } catch (err: any) {
       console.error('Error fetching revenue:', err);

@@ -11,18 +11,38 @@ class QuizService {
       throw new Error('Quiz not found');
     }
 
-    // Check if student has exceeded attempt limit
-    const attemptCount = await quizRepository.getAttemptCount(quizId, studentId);
-    console.log(`[SERVICE] Quiz: ${quiz.title}, Attempts allowed: ${quiz.attempts_allowed}, Current attempts: ${attemptCount}`);
-    
-    if (quiz.attempts_allowed && attemptCount >= quiz.attempts_allowed) {
-      console.log(`[SERVICE] Attempt limit exceeded! ${attemptCount} >= ${quiz.attempts_allowed}`);
-      throw new Error('Attempt limit exceeded');
+    // Check if there's a pending attempt (not yet submitted)
+    const pendingAttempt = await quizRepository.getPendingAttempt(quizId, studentId);
+    if (pendingAttempt) {
+      console.log(`[SERVICE] Found pending attempt #${pendingAttempt.attempt_no}, returning existing attempt`);
+      return pendingAttempt;
     }
 
-    const attemptNo = attemptCount + 1;
-    console.log(`[SERVICE] Creating attempt #${attemptNo}`);
-    return await quizRepository.createAttempt(quizId, studentId, attemptNo);
+    // Check if student has already passed the quiz
+    const hasPassed = await quizRepository.hasPassedAttempt(quizId, studentId);
+    
+    if (hasPassed) {
+      // Student has already passed, check if they can retake (if attempts_allowed is set)
+      // Note: attempts_allowed now limits retakes after passing
+      if (quiz.attempts_allowed) {
+        const passedCount = await quizRepository.getPassedAttemptCount(quizId, studentId);
+        if (passedCount >= quiz.attempts_allowed) {
+          console.log(`[SERVICE] Quiz already passed ${passedCount} times, limit: ${quiz.attempts_allowed}`);
+          throw new Error('Attempt limit exceeded');
+        }
+      }
+      // If no limit or under limit, allow retake
+      const attemptCount = await quizRepository.getAttemptCount(quizId, studentId);
+      const attemptNo = attemptCount + 1;
+      console.log(`[SERVICE] Student already passed, creating retake attempt #${attemptNo}`);
+      return await quizRepository.createAttempt(quizId, studentId, attemptNo);
+    } else {
+      // Student hasn't passed yet, allow unlimited attempts until they pass
+      const attemptCount = await quizRepository.getAttemptCount(quizId, studentId);
+      const attemptNo = attemptCount + 1;
+      console.log(`[SERVICE] Student hasn't passed yet, creating attempt #${attemptNo} (unlimited until pass)`);
+      return await quizRepository.createAttempt(quizId, studentId, attemptNo);
+    }
   }
 
   async submitAttempt(quizId, attemptId, answers) {
