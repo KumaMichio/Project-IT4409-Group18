@@ -69,13 +69,29 @@ class QuizRepository {
 
   // Check if student has any passed attempt
   async hasPassedAttempt(quizId, studentId) {
+    console.log(`[REPO] Checking hasPassedAttempt - quizId: ${quizId}, studentId: ${studentId}`);
     const result = await db.query(
       `SELECT COUNT(*) as count
        FROM quiz_attempts
        WHERE quiz_id = $1 AND student_id = $2 AND submitted_at IS NOT NULL AND passed = true`,
       [quizId, studentId]
     );
-    return parseInt(result.rows[0].count) > 0;
+    const count = parseInt(result.rows[0].count);
+    console.log(`[REPO] hasPassedAttempt count: ${count}`);
+    return count > 0;
+  }
+
+  // Get the most recent passed attempt
+  async getPassedAttempt(quizId, studentId) {
+    const result = await db.query(
+      `SELECT id, attempt_no, started_at, submitted_at, score, passed
+       FROM quiz_attempts
+       WHERE quiz_id = $1 AND student_id = $2 AND submitted_at IS NOT NULL AND passed = true
+       ORDER BY submitted_at DESC
+       LIMIT 1`,
+      [quizId, studentId]
+    );
+    return result.rows[0] || null;
   }
 
   // Count passed attempts (for limit checking after passing)
@@ -151,6 +167,16 @@ class QuizRepository {
        WHERE quiz_id = $1 AND student_id = $2
        ORDER BY attempt_no DESC`,
       [quizId, studentId]
+    );
+    return result.rows;
+  }
+
+  async getAttemptAnswers(attemptId) {
+    const result = await db.query(
+      `SELECT question_id, selected_option_ids, is_correct
+       FROM quiz_attempt_answers
+       WHERE attempt_id = $1`,
+      [attemptId]
     );
     return result.rows;
   }

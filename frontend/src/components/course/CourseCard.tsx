@@ -34,7 +34,7 @@ export function CourseCard({ course }: CourseCardProps) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow group relative">
+    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow group relative h-full flex flex-col">
       <Link href={`/courses/${course.id}`} className="block">
         <div className="relative h-48 bg-gray-200">
           {course.thumbnail_url ? (
@@ -53,7 +53,7 @@ export function CourseCard({ course }: CourseCardProps) {
         </div>
       </Link>
 
-      <div className="p-4">
+      <div className="p-4 flex-1 flex flex-col">
         <Link href={`/courses/${course.id}`}>
           <h3 className="font-semibold text-lg mb-2 line-clamp-2 hover:text-blue-600 transition">
             {course.title}
@@ -65,22 +65,24 @@ export function CourseCard({ course }: CourseCardProps) {
         <p className="text-sm text-gray-500 mb-3">
           {course.instructor_name}
         </p>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-1">
-            <span className="text-yellow-500">★</span>
-            <span className="text-sm font-medium">
-              {parseFloat(course.avg_rating.toString()).toFixed(1)}
-            </span>
-            <span className="text-sm text-gray-500">
-              ({course.review_count})
-            </span>
+        <div className="mt-auto">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-1">
+              <span className="text-yellow-500">★</span>
+              <span className="text-sm font-medium">
+                {parseFloat(course.avg_rating.toString()).toFixed(1)}
+              </span>
+              <span className="text-sm text-gray-500">
+                ({course.review_count})
+              </span>
+            </div>
+            <div className="text-lg font-bold text-red-600">
+              {formatPrice(course.price_cents)}
+            </div>
           </div>
-          <div className="text-lg font-bold text-red-600">
-            {formatPrice(course.price_cents)}
+          <div className="text-xs text-gray-500">
+            {course.enrollment_count} học viên
           </div>
-        </div>
-        <div className="text-xs text-gray-500">
-          {course.enrollment_count} học viên
         </div>
       </div>
     </div>
