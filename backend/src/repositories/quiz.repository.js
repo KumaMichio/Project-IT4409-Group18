@@ -1,7 +1,7 @@
 const db = require('../config/db');
 
 class QuizRepository {
-  async getQuizById(quizId) {
+  async getQuizById(quizId, includeCorrectAnswers = false) {
     const quizResult = await db.query(
       `SELECT id, course_id, lesson_id, title, time_limit_s, attempts_allowed, pass_score
        FROM quizzes
@@ -26,8 +26,13 @@ class QuizRepository {
 
     const questions = await Promise.all(
       questionsResult.rows.map(async (question) => {
+        // Only include is_correct field if explicitly requested (after submission)
+        const selectFields = includeCorrectAnswers
+          ? 'id, option_text, is_correct, position'
+          : 'id, option_text, position';
+        
         const optionsResult = await db.query(
-          `SELECT id, option_text, is_correct, position
+          `SELECT ${selectFields}
            FROM quiz_options
            WHERE question_id = $1
            ORDER BY position`,
@@ -36,7 +41,11 @@ class QuizRepository {
 
         return {
           ...question,
-          options: optionsResult.rows
+          options: optionsResult.rows.map(opt => 
+            includeCorrectAnswers 
+              ? opt 
+              : { ...opt, is_correct: false } // Send false by default to hide answer
+          )
         };
       })
     );

@@ -179,7 +179,7 @@ class CourseRepository {
   async getCourseReviews(courseId, limit = 10) {
     const result = await pool.query(
       `SELECT 
-        cr.id, cr.rating, cr.comment, cr.created_at,
+        cr.id, cr.rating, cr.comment, cr.created_at, cr.student_id,
         u.full_name as student_name, u.avatar_url as student_avatar
        FROM course_reviews cr
        JOIN users u ON cr.student_id = u.id

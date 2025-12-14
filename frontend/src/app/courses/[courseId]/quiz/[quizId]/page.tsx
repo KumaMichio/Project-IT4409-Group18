@@ -46,6 +46,7 @@ export default function QuizPage() {
   const [answers, setAnswers] = useState<Record<number, number | number[]>>({});
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
+  const [passed, setPassed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [attemptId, setAttemptId] = useState<number | null>(null);
@@ -194,6 +195,12 @@ export default function QuizPage() {
 
       setScore(response.data.score);
       setSubmitted(true);
+      setPassed(response.data.passed);
+      
+      // Update quiz with correct answers from response
+      if (response.data.quiz) {
+        setQuiz(response.data.quiz);
+      }
       
       // Fetch next lesson after submission
       fetchNextLesson();
@@ -281,7 +288,7 @@ export default function QuizPage() {
               score={score}
               totalPoints={quiz.questions.reduce((sum, q) => sum + q.points, 0)}
               passScore={quiz.pass_score}
-              passed={score >= quiz.pass_score}
+              passed={passed}
             />
           )}
         </Card>

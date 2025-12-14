@@ -6,6 +6,7 @@ const recommendationRoutes = require('./recommendation.routes');
 const revenueRoutes = require('./revenue.routes');
 const systemRoutes = require('./system.routes');
 const userRoutes = require('./user.routes');
+const reviewRoutes = require('./review.routes');
 
 // Mount all routes
 router.use('/auth', authRoutes);
@@ -13,5 +14,6 @@ router.use('/api/recommendations', recommendationRoutes);
 router.use('/api/revenue', revenueRoutes);
 router.use('/api/admin/system', systemRoutes);
 router.use('/api/admin/users', userRoutes);
+router.use('/api/reviews', reviewRoutes);
 
 module.exports = router;

@@ -46,10 +46,16 @@ class QuizService {
   }
 
   async submitAttempt(quizId, attemptId, answers) {
-    const quiz = await quizRepository.getQuizById(quizId);
+    // Get quiz with correct answers for grading
+    const quiz = await quizRepository.getQuizById(quizId, true);
     if (!quiz) {
       throw new Error('Quiz not found');
     }
+
+    console.log('[SUBMIT] Quiz ID:', quizId);
+    console.log('[SUBMIT] Attempt ID:', attemptId);
+    console.log('[SUBMIT] Answers received:', JSON.stringify(answers, null, 2));
+    console.log('[SUBMIT] Quiz questions:', quiz.questions.map(q => ({ id: q.id, question: q.question })));
 
     let totalScore = 0;
     let earnedScore = 0;
@@ -58,14 +64,23 @@ class QuizService {
     for (const question of quiz.questions) {
       totalScore += question.points;
       
-      const answer = answers.find(a => a.questionId === question.id);
-      if (!answer) continue;
+      // Convert question.id to number for comparison
+      const questionId = parseInt(question.id);
+      const answer = answers.find(a => a.questionId === questionId);
+      if (!answer) {
+        console.log(`[SUBMIT] Question ${questionId}: No answer provided`);
+        continue;
+      }
 
       const correctOptionIds = question.options
         .filter(opt => opt.is_correct)
-        .map(opt => opt.id);
+        .map(opt => parseInt(opt.id)); // Convert to number
 
-      const selectedIds = answer.selectedOptionIds || [];
+      const selectedIds = (answer.selectedOptionIds || []).map(id => parseInt(id)); // Convert to number
+      
+      console.log(`[SUBMIT] Question ${questionId}:`);
+      console.log(`  - Correct IDs: [${correctOptionIds.join(', ')}]`);
+      console.log(`  - Selected IDs: [${selectedIds.join(', ')}]`);
       
       // Check if answer is correct
       const isCorrect = 
@@ -73,16 +88,24 @@ class QuizService {
         correctOptionIds.every(id => selectedIds.includes(id)) &&
         selectedIds.every(id => correctOptionIds.includes(id));
 
+      console.log(`  - Is Correct: ${isCorrect}`);
+
       if (isCorrect) {
         earnedScore += question.points;
       }
 
-      // Save answer
-      await quizRepository.saveAnswer(attemptId, question.id, selectedIds, isCorrect);
+      // Save answer (use questionId for consistency)
+      await quizRepository.saveAnswer(attemptId, questionId, selectedIds, isCorrect);
     }
+
+    console.log(`[SUBMIT] Total Score: ${earnedScore}/${totalScore}`);
 
     const scorePercent = totalScore > 0 ? Math.round((earnedScore / totalScore) * 100) : 0;
     const passed = scorePercent >= quiz.pass_score;
+
+    console.log(`[SUBMIT] Score Percent: ${scorePercent}%`);
+    console.log(`[SUBMIT] Pass Score Required: ${quiz.pass_score}%`);
+    console.log(`[SUBMIT] Passed: ${passed}`);
 
     await quizRepository.submitAttempt(attemptId, earnedScore, passed);
 
@@ -91,7 +114,9 @@ class QuizService {
       totalPoints: totalScore,
       scorePercent,
       passed,
-      passScore: quiz.pass_score
+      passScore: quiz.pass_score,
+      // Return quiz with correct answers for display
+      quiz
     };
   }
 

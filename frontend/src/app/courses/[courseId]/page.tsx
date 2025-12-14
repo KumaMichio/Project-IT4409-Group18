@@ -4,11 +4,15 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import apiClient from '@/lib/apiClient';
-import { CheckCircleTwoTone, UserOutlined, StarFilled, MinusOutlined, PlusOutlined, PlayCircleOutlined, FileTextOutlined } from '@ant-design/icons';
+import { CheckCircleTwoTone, UserOutlined, StarFilled, MinusOutlined, PlusOutlined, PlayCircleOutlined, FileTextOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Button, Modal, Rate, Input } from 'antd';
+
+const { TextArea } = Input;
 import { Header } from '../../../components/layout/Header';
 import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/hooks/useCart';
 import { toast } from '@/lib/toast';
+import ReviewForm from '../../../components/review/ReviewForm';
 
 interface Module {
   id: number;
@@ -60,6 +64,7 @@ interface CourseDetail {
     rating: number;
     comment: string;
     created_at: string;
+    student_id: number;
     student_name: string;
     student_avatar: string;
   }>;
@@ -82,11 +87,21 @@ export default function CourseDetailPage() {
   const [addingToCart, setAddingToCart] = useState(false);
   const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set());
   const [relatedCourses, setRelatedCourses] = useState<any[]>([]);
+  const [myReview, setMyReview] = useState<any>(null);
+  const [loadingReview, setLoadingReview] = useState(false);
+  const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
+  const [editRating, setEditRating] = useState(0);
+  const [editComment, setEditComment] = useState('');
+  const [updatingReview, setUpdatingReview] = useState(false);
+  const [deletingReview, setDeletingReview] = useState<any>(null);
 
   useEffect(() => {
     fetchCourseDetail();
     fetchRelatedCourses();
-  }, [courseId]);
+    if (user) {
+      fetchMyReview();
+    }
+  }, [courseId, user]);
 
   const fetchRelatedCourses = async () => {
     try {
@@ -111,6 +126,72 @@ export default function CourseDetailPage() {
       alert('Không thể tải thông tin khóa học');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMyReview = async () => {
+    try {
+      setLoadingReview(true);
+      const response = await apiClient.get(`/reviews/courses/${courseId}/my-review`);
+      setMyReview(response.data.review);
+    } catch (error) {
+      console.error('Error fetching my review:', error);
+      setMyReview(null);
+    } finally {
+      setLoadingReview(false);
+    }
+  };
+
+  const handleReviewSuccess = () => {
+    fetchMyReview();
+    fetchCourseDetail(); // Refresh to update ratings
+  };
+
+  const handleEditClick = (review: any) => {
+    setEditingReviewId(review.id);
+    setEditRating(review.rating);
+    setEditComment(review.comment || '');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingReviewId(null);
+    setEditRating(0);
+    setEditComment('');
+  };
+
+  const handleUpdateReview = async (reviewId: number) => {
+    if (editRating === 0) {
+      toast.warning('Vui lòng chọn số sao đánh giá');
+      return;
+    }
+
+    try {
+      setUpdatingReview(true);
+      await apiClient.put(`/reviews/${reviewId}`, {
+        rating: editRating,
+        comment: editComment
+      });
+      toast.success('Đã cập nhật đánh giá thành công!');
+      setEditingReviewId(null);
+      fetchMyReview();
+      fetchCourseDetail();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Không thể cập nhật đánh giá');
+    } finally {
+      setUpdatingReview(false);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: number) => {
+    try {
+      await apiClient.delete(`/reviews/${reviewId}`);
+      toast.success('Đã xóa đánh giá thành công');
+      setMyReview(null);
+      setDeletingReview(null);
+      fetchCourseDetail(); // Refresh to update ratings
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Không thể xóa đánh giá');
+      console.error('Error deleting review:', error);
     }
   };
 
@@ -604,6 +685,16 @@ export default function CourseDetailPage() {
                 </div>
               </div>
             </div>
+
+            {/* Review Form Section - Only show if no review yet */}
+            {enrollment.enrolled && user && !myReview && (
+              <div className="bg-white rounded-lg shadow-sm border p-6">
+                <ReviewForm
+                  courseId={courseId}
+                  onSuccess={handleReviewSuccess}
+                />
+              </div>
+            )}
           </div>
 
           {/* Right: Empty for spacing */}
@@ -688,46 +779,121 @@ export default function CourseDetailPage() {
               {reviews.map((review) => (
                 <div 
                   key={review.id} 
-                  className="bg-white rounded-lg shadow-sm border p-6 flex flex-col"
+                  className="bg-white rounded-lg shadow-sm border p-6 flex flex-col relative"
                 >
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-16 h-16 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
-                      {review.student_avatar ? (
-                        <img
-                          src={review.student_avatar}
-                          alt={review.student_name}
-                          className="w-full h-full rounded-full object-cover"
+                  {editingReviewId === review.id ? (
+                    // Inline Edit Form
+                    <>
+                      <h3 className="text-lg font-semibold mb-4">Chỉnh sửa đánh giá</h3>
+                      <div className="mb-4">
+                        <p className="text-sm text-gray-600 mb-2">Đánh giá của bạn:</p>
+                        <Rate
+                          value={editRating}
+                          onChange={setEditRating}
+                          className="text-2xl"
+                          character={<StarFilled />}
                         />
-                      ) : (
-                        <UserOutlined className="text-2xl text-gray-600" />
+                      </div>
+                      <div className="mb-4">
+                        <p className="text-sm text-gray-600 mb-2">Nhận xét (không bắt buộc):</p>
+                        <TextArea
+                          value={editComment}
+                          onChange={(e) => setEditComment(e.target.value)}
+                          placeholder="Chia sẻ trải nghiệm của bạn về khóa học này..."
+                          rows={4}
+                          maxLength={500}
+                          showCount
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="primary"
+                          onClick={() => handleUpdateReview(review.id)}
+                          loading={updatingReview}
+                          disabled={editRating === 0}
+                        >
+                          Cập nhật
+                        </Button>
+                        <Button onClick={handleCancelEdit}>
+                          Hủy
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    // Normal Review Display
+                    <>
+                      {/* Edit/Delete buttons - only for user's own review */}
+                      {user && String(review.student_id) === String(user.id) && (
+                        <div className="absolute top-4 right-4 flex gap-2">
+                          <Button
+                            type="text"
+                            icon={<EditOutlined />}
+                            size="small"
+                            onClick={() => handleEditClick(review)}
+                          />
+                          <Button
+                            type="text"
+                            danger
+                            icon={<DeleteOutlined />}
+                            size="small"
+                            onClick={() => setDeletingReview(review)}
+                          />
+                        </div>
                       )}
-                    </div>
-                    <div>
-                      <div className="font-bold text-lg">{review.student_name}</div>
-                      <div className="text-sm text-gray-500">Marketing Manager</div>
-                    </div>
-                  </div>
-                  
-                  <p className="text-gray-700 leading-relaxed mb-4 flex-1">
-                    {review.comment}
-                  </p>
-                  
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <StarFilled
-                        key={star}
-                        className={`text-xl ${
-                          star <= review.rating ? 'text-red-500' : 'text-gray-300'
-                        }`}
-                      />
-                    ))}
-                  </div>
+
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="w-16 h-16 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
+                          {review.student_avatar ? (
+                            <img
+                              src={review.student_avatar}
+                              alt={review.student_name}
+                              className="w-full h-full rounded-full object-cover"
+                            />
+                          ) : (
+                            <UserOutlined className="text-2xl text-gray-600" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-bold text-lg">{review.student_name}</div>
+                          <div className="text-sm text-gray-500">Marketing Manager</div>
+                        </div>
+                      </div>
+                      
+                      <p className="text-gray-700 leading-relaxed mb-4 flex-1">
+                        {review.comment}
+                      </p>
+                      
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <StarFilled
+                            key={star}
+                            className={`text-xl ${
+                              star <= review.rating ? 'text-red-500' : 'text-gray-300'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        title="Xác nhận xóa đánh giá"
+        open={!!deletingReview}
+        onOk={() => deletingReview && handleDeleteReview(deletingReview.id)}
+        onCancel={() => setDeletingReview(null)}
+        okText="Xóa"
+        cancelText="Hủy"
+        okButtonProps={{ danger: true }}
+      >
+        <p>Bạn có chắc chắn muốn xóa đánh giá này không?</p>
+      </Modal>
     </div>
   );
 }

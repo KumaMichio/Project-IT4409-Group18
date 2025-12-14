@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Radio, Space, Typography } from 'antd';
+import { Card, Radio, Checkbox, Space, Typography } from 'antd';
 import { CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
@@ -37,6 +37,14 @@ export default function QuizQuestion({
 }: QuizQuestionProps) {
   const isMultiChoice = question.qtype === 'MULTI_CHOICE';
 
+  const handleCheckboxChange = (optionId: number, checked: boolean) => {
+    const currentAnswers = Array.isArray(userAnswer) ? userAnswer : [];
+    const newAnswers = checked
+      ? [...currentAnswers, optionId]
+      : currentAnswers.filter(id => id !== optionId);
+    onChange(question.id, newAnswers);
+  };
+
   return (
     <Card className="shadow-sm">
       <div className="mb-4">
@@ -53,17 +61,10 @@ export default function QuizQuestion({
         </Text>
       </div>
 
-      <Radio.Group
-        value={userAnswer}
-        onChange={(e) => onChange(question.id, e.target.value)}
-        disabled={submitted}
-        className="w-full"
-      >
+      {isMultiChoice ? (
         <Space direction="vertical" className="w-full">
           {question.options.map(option => {
-            const isSelected = Array.isArray(userAnswer) 
-              ? userAnswer.includes(option.id)
-              : userAnswer === option.id;
+            const isSelected = Array.isArray(userAnswer) && userAnswer.includes(option.id);
             const showCorrect = submitted && option.is_correct;
             const showWrong = submitted && isSelected && !option.is_correct;
 
@@ -77,18 +78,58 @@ export default function QuizQuestion({
                   'border-gray-200'
                 }`}
               >
-                <Radio value={option.id} className="w-full">
+                <Checkbox
+                  checked={isSelected}
+                  onChange={(e) => handleCheckboxChange(option.id, e.target.checked)}
+                  disabled={submitted}
+                  className="w-full"
+                >
                   <span className={showCorrect ? 'text-green-700 font-medium' : showWrong ? 'text-red-700' : ''}>
                     {option.option_text}
                   </span>
                   {showCorrect && <CheckCircleOutlined className="ml-2 text-green-600" />}
                   {showWrong && <CloseCircleOutlined className="ml-2 text-red-600" />}
-                </Radio>
+                </Checkbox>
               </div>
             );
           })}
         </Space>
-      </Radio.Group>
+      ) : (
+        <Radio.Group
+          value={userAnswer}
+          onChange={(e) => onChange(question.id, e.target.value)}
+          disabled={submitted}
+          className="w-full"
+        >
+          <Space direction="vertical" className="w-full">
+            {question.options.map(option => {
+              const isSelected = userAnswer === option.id;
+              const showCorrect = submitted && option.is_correct;
+              const showWrong = submitted && isSelected && !option.is_correct;
+
+              return (
+                <div
+                  key={option.id}
+                  className={`p-3 rounded border ${
+                    showCorrect ? 'border-green-500 bg-green-50' :
+                    showWrong ? 'border-red-500 bg-red-50' :
+                    isSelected ? 'border-blue-500 bg-blue-50' :
+                    'border-gray-200'
+                  }`}
+                >
+                  <Radio value={option.id} className="w-full">
+                    <span className={showCorrect ? 'text-green-700 font-medium' : showWrong ? 'text-red-700' : ''}>
+                      {option.option_text}
+                    </span>
+                    {showCorrect && <CheckCircleOutlined className="ml-2 text-green-600" />}
+                    {showWrong && <CloseCircleOutlined className="ml-2 text-red-600" />}
+                  </Radio>
+                </div>
+              );
+            })}
+          </Space>
+        </Radio.Group>
+      )}
     </Card>
   );
 }

@@ -28,6 +28,7 @@ function createExpressApp() {
   const paymentRoutes = require('./routes/payment.routes');
   const enrollmentRoutes = require('./routes/enrollment.routes');
   const chatRoutes = require('./routes/chat.route');
+  const reviewRoutes = require('./routes/review.routes');
 
   // Mount existing routes
   app.use('/api/courses', courseRoutes);
@@ -44,6 +45,7 @@ function createExpressApp() {
   app.use('/api/payments', paymentRoutes);
   app.use('/api/enrollments', enrollmentRoutes);
   app.use('/api/chat', chatRoutes);
+  app.use('/api/reviews', reviewRoutes);
 
   // Health check
   app.get('/api/health', (req, res) => {

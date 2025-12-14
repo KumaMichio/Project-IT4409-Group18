@@ -468,4 +468,3 @@ CREATE TABLE IF NOT EXISTS student_lesson_progress (
 -- Index cho bảng student_lesson_progress
 CREATE INDEX IF NOT EXISTS idx_student_lesson_progress_student ON student_lesson_progress(student_id);
 CREATE INDEX IF NOT EXISTS idx_student_lesson_progress_lesson ON student_lesson_progress(lesson_id);
-

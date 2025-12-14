@@ -253,26 +253,30 @@ INSERT INTO lesson_assets (lesson_id, asset_kind, url, position) VALUES
 
 -- Lesson: Domain
 INSERT INTO lesson_assets (lesson_id, asset_kind, url, position) VALUES
-((SELECT id FROM lessons WHERE title = 'Domain là gì? Tên miền là gì?' LIMIT 1), 'VIDEO', 'https://www.youtube.com/watch?v=example2', 1),
+((SELECT id FROM lessons WHERE title = 'Domain là gì? Tên miền là gì?' LIMIT 1), 'VIDEO', 'https://www.youtube.com/watch?v=Rck3BALhI5c', 1),
 ((SELECT id FROM lessons WHERE title = 'Domain là gì? Tên miền là gì?' LIMIT 1), 'PDF', 'https://example.com/docs/domain-names.pdf', 2);
 
 -- Lesson: Học IT
 INSERT INTO lesson_assets (lesson_id, asset_kind, url, position) VALUES
-((SELECT id FROM lessons WHERE title = 'Học IT cần tổ chất gì? Góc nhìn khác từ chuyên gia định hướng giáo dục' LIMIT 1), 'VIDEO', 'https://www.youtube.com/watch?v=example4', 1);
+((SELECT id FROM lessons WHERE title = 'Học IT cần tổ chất gì? Góc nhìn khác từ chuyên gia định hướng giáo dục' LIMIT 1), 'VIDEO', 'https://www.youtube.com/watch?v=kJocbLHH0vU', 1);
 
 -- Lesson: ERD
 INSERT INTO lesson_assets (lesson_id, asset_kind, url, position) VALUES
-((SELECT id FROM lessons WHERE title = 'ERD - Entity Relationship Diagram' LIMIT 1), 'VIDEO', 'https://www.youtube.com/watch?v=example6', 1),
+((SELECT id FROM lessons WHERE title = 'ERD - Entity Relationship Diagram' LIMIT 1), 'VIDEO', 'https://www.youtube.com/watch?v=-CuY5ADwn24', 1),
 ((SELECT id FROM lessons WHERE title = 'ERD - Entity Relationship Diagram' LIMIT 1), 'PDF', 'https://example.com/docs/erd-guide.pdf', 2);
 
 -- Lesson: Node.js
 INSERT INTO lesson_assets (lesson_id, asset_kind, url, position) VALUES
-((SELECT id FROM lessons WHERE title = 'Node.js là gì?' LIMIT 1), 'VIDEO', 'https://www.youtube.com/watch?v=example8', 1);
+((SELECT id FROM lessons WHERE title = 'Node.js là gì?' LIMIT 1), 'VIDEO', 'https://www.youtube.com/watch?v=TlB_eWDSMt4', 1);
 
 -- Lesson: React Intro
 INSERT INTO lesson_assets (lesson_id, asset_kind, url, position) VALUES
-((SELECT id FROM lessons WHERE title = 'What is React?' LIMIT 1), 'VIDEO', 'https://www.youtube.com/watch?v=example11', 1),
+((SELECT id FROM lessons WHERE title = 'What is React?' LIMIT 1), 'VIDEO', 'https://www.youtube.com/watch?v=Ke90Tje7VS0', 1),
 ((SELECT id FROM lessons WHERE title = 'What is React?' LIMIT 1), 'LINK', 'https://react.dev/learn', 2);
+
+-- Lesson: JSX và Components
+INSERT INTO lesson_assets (lesson_id, asset_kind, url, position) VALUES
+((SELECT id FROM lessons WHERE title = 'JSX và Components' LIMIT 1), 'VIDEO', 'https://www.youtube.com/watch?v=9hb_0TZ_MVI', 1);
 
 -- ==== QUIZZES ====
 INSERT INTO quizzes (course_id, lesson_id, title, time_limit_s, attempts_allowed, pass_score) VALUES
