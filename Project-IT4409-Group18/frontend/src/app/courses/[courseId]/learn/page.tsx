@@ -88,7 +88,7 @@ export default function CourseViewerPage() {
     }
     
     try {
-      const response = await apiClient.get(`/courses/${courseId}/content`);
+      const response = await apiClient.get(`/api/courses/${courseId}/content`);
       setCourse(response.data.course);
       setModules(response.data.modules);
     } catch (error: any) {

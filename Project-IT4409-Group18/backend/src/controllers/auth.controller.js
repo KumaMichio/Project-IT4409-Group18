@@ -8,14 +8,24 @@ const {
 async function signupController(req, res) {
   try {
     const { name, email, password, role } = req.body || {};
+    
+    // Log the registration attempt for debugging
+    console.log('[AUTH] Registration attempt:', { 
+      email, 
+      role, 
+      hasName: !!name, 
+      hasPassword: !!password 
+    });
+    
     const result = await signup({ name, email, password, role });
     return res.status(201).json(result); // { token, user }
   } catch (err) {
     if (err instanceof AuthError) {
+      console.log('[AUTH] Registration error:', err.status, err.message);
       return res.status(err.status).json({ error: err.message });
     }
-    console.error(err);
-    return res.status(500).json({ error: 'Server error' });
+    console.error('[AUTH] Unexpected registration error:', err);
+    return res.status(500).json({ error: 'Server error. Please try again later.' });
   }
 }
 

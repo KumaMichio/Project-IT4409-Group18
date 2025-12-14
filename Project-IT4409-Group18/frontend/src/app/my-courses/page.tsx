@@ -59,7 +59,7 @@ export default function MyCoursesPage() {
       try {
         setLoading(true);
         setError(null);
-        const response = await apiClient.get('/enrollments/my-courses');
+        const response = await apiClient.get('/api/enrollments/my-courses');
         setEnrollments(response.data.data.enrollments || []);
       } catch (err: any) {
         console.error('Failed to fetch enrollments:', err);

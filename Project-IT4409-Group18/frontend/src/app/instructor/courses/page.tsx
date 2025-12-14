@@ -34,7 +34,7 @@ export default function InstructorCoursesPage() {
   const fetchCourses = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get<{ courses: Course[] }>('/courses/instructor/my-courses');
+      const response = await apiClient.get<{ courses: Course[] }>('/api/courses/instructor/my-courses');
       setCourses(response.data.courses);
       setError(null);
     } catch (err: any) {
@@ -51,7 +51,7 @@ export default function InstructorCoursesPage() {
     }
 
     try {
-      await apiClient.delete(`/courses/instructor/my-courses/${courseId}`);
+      await apiClient.delete(`/api/courses/instructor/my-courses/${courseId}`);
       fetchCourses();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Không thể xóa khóa học');
@@ -60,7 +60,7 @@ export default function InstructorCoursesPage() {
 
   const handlePublishToggle = async (course: Course) => {
     try {
-      await apiClient.put(`/courses/instructor/my-courses/${course.id}`, {
+      await apiClient.put(`/api/courses/instructor/my-courses/${course.id}`, {
         is_published: !course.is_published,
       });
       fetchCourses();

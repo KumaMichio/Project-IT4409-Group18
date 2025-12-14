@@ -53,7 +53,7 @@ export function useAuth() {
       setError(null);
       setIsLoading(true);
       const response = await apiClient.post<AuthResponse>(
-        '/auth/signin',
+        '/api/auth/signin',
         credentials
       );
       const { token, user: userData } = response.data;
@@ -92,7 +92,7 @@ export function useAuth() {
     try {
       setError(null);
       setIsLoading(true);
-      const response = await apiClient.post<AuthResponse>('/auth/signup', {
+      const response = await apiClient.post<AuthResponse>('/api/auth/signup', {
         ...data,
         role: data.role || 'student',
       });
@@ -103,8 +103,28 @@ export function useAuth() {
       router.push('/');
       return userData;
     } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.error || 'Registration failed. Please try again.';
+      // Extract more detailed error message
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (err.response) {
+        // Server responded with error
+        errorMessage = err.response.data?.error || 
+                     err.response.data?.message || 
+                     `Server error: ${err.response.status}`;
+      } else if (err.request) {
+        // Request was made but no response received
+        errorMessage = 'Unable to connect to server. Please check your connection.';
+      } else if (err.message) {
+        // Error in request setup
+        errorMessage = err.message;
+      }
+      
+      console.error('Registration error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+      });
+      
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -126,7 +146,7 @@ export function useAuth() {
    */
   const fetchCurrentUser = async () => {
     try {
-      const response = await apiClient.get<{ user: User }>('/auth/me');
+      const response = await apiClient.get<{ user: User }>('/api/auth/me');
       const userData = response.data.user;
       saveUser(userData);
       setUser(userData);

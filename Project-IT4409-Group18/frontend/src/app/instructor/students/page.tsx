@@ -43,7 +43,7 @@ export default function InstructorStudentsPage() {
 
   const fetchAllStudents = async () => {
     try {
-      const response = await apiClient.get<{ students: Student[] }>('/courses/instructor/students');
+      const response = await apiClient.get<{ students: Student[] }>('/api/courses/instructor/students');
       setAllStudents(response.data.students);
     } catch (err: any) {
       console.error('Error fetching students:', err);
@@ -54,7 +54,7 @@ export default function InstructorStudentsPage() {
 
   const fetchCourses = async () => {
     try {
-      const response = await apiClient.get<{ courses: any[] }>('/courses/instructor/my-courses');
+      const response = await apiClient.get<{ courses: any[] }>('/api/courses/instructor/my-courses');
       setCourses(response.data.courses);
     } catch (err: any) {
       console.error('Error fetching courses:', err);
@@ -64,7 +64,7 @@ export default function InstructorStudentsPage() {
   const fetchCourseStudents = async (courseId: number) => {
     try {
       const response = await apiClient.get<{ students: CourseStudent[] }>(
-        `/courses/instructor/my-courses/${courseId}/students`
+        `/api/courses/instructor/my-courses/${courseId}/students`
       );
       setCourseStudents(response.data.students);
     } catch (err: any) {

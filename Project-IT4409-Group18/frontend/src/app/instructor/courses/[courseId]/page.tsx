@@ -85,7 +85,7 @@ export default function CourseDetailPage() {
   const fetchCourse = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get<Course>(`/courses/instructor/my-courses/${courseId}`);
+      const response = await apiClient.get<Course>(`/api/courses/instructor/my-courses/${courseId}`);
       setCourse(response.data);
       setFormData({
         title: response.data.title,
@@ -105,7 +105,7 @@ export default function CourseDetailPage() {
 
   const handleUpdateCourse = async () => {
     try {
-      await apiClient.put(`/courses/instructor/my-courses/${courseId}`, formData);
+      await apiClient.put(`/api/courses/instructor/my-courses/${courseId}`, formData);
       alert('Cập nhật thành công!');
       fetchCourse();
     } catch (err: any) {
@@ -122,11 +122,11 @@ export default function CourseDetailPage() {
   const handleSaveModule = async () => {
     try {
       if (moduleModal.editing) {
-        await apiClient.put(`/courses/instructor/modules/${moduleModal.editing.id}`, { title: moduleForm.title });
+        await apiClient.put(`/api/courses/instructor/modules/${moduleModal.editing.id}`, { title: moduleForm.title });
       } else {
         const modules = course?.modules || [];
         const position = modules.length + 1;
-        await apiClient.post(`/courses/instructor/my-courses/${courseId}/modules`, {
+        await apiClient.post(`/api/courses/instructor/my-courses/${courseId}/modules`, {
           title: moduleForm.title,
           position,
         });
@@ -141,7 +141,7 @@ export default function CourseDetailPage() {
   const handleDeleteModule = async (moduleId: number) => {
     if (!confirm('Bạn có chắc chắn muốn xóa mô-đun này?')) return;
     try {
-      await apiClient.delete(`/courses/instructor/modules/${moduleId}`);
+      await apiClient.delete(`/api/courses/instructor/modules/${moduleId}`);
       fetchCourse();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Không thể xóa mô-đun');
@@ -157,14 +157,14 @@ export default function CourseDetailPage() {
   const handleSaveLesson = async () => {
     try {
       if (lessonModal.editing) {
-        await apiClient.put(`/courses/instructor/lessons/${lessonModal.editing.id}`, {
+        await apiClient.put(`/api/courses/instructor/lessons/${lessonModal.editing.id}`, {
           title: lessonForm.title,
           duration_s: lessonForm.duration_s ? parseInt(lessonForm.duration_s) : null,
         });
       } else {
         const module = course?.modules.find(m => m.id === lessonModal.moduleId);
         const position = (module?.lessons.length || 0) + 1;
-        await apiClient.post(`/courses/instructor/modules/${lessonModal.moduleId}/lessons`, {
+        await apiClient.post(`/api/courses/instructor/modules/${lessonModal.moduleId}/lessons`, {
           title: lessonForm.title,
           position,
           duration_s: lessonForm.duration_s ? parseInt(lessonForm.duration_s) : null,
@@ -180,7 +180,7 @@ export default function CourseDetailPage() {
   const handleDeleteLesson = async (lessonId: number) => {
     if (!confirm('Bạn có chắc chắn muốn xóa bài học này?')) return;
     try {
-      await apiClient.delete(`/courses/instructor/lessons/${lessonId}`);
+      await apiClient.delete(`/api/courses/instructor/lessons/${lessonId}`);
       fetchCourse();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Không thể xóa bài học');
@@ -196,7 +196,7 @@ export default function CourseDetailPage() {
   const handleSaveVideo = async () => {
     try {
       if (videoModal.editing) {
-        await apiClient.put(`/courses/instructor/assets/${videoModal.editing.id}`, {
+        await apiClient.put(`/api/courses/instructor/assets/${videoModal.editing.id}`, {
           url: videoForm.url,
         });
       } else {
@@ -221,7 +221,7 @@ export default function CourseDetailPage() {
           }
         } else {
           // Add URL
-          await apiClient.post(`/courses/instructor/lessons/${videoModal.lessonId}/assets`, {
+          await apiClient.post(`/api/courses/instructor/lessons/${videoModal.lessonId}/assets`, {
             asset_kind: 'VIDEO',
             url: videoForm.url,
             position: 1,
@@ -239,7 +239,7 @@ export default function CourseDetailPage() {
   const handleDeleteVideo = async (assetId: number) => {
     if (!confirm('Bạn có chắc chắn muốn xóa video này?')) return;
     try {
-      await apiClient.delete(`/courses/instructor/assets/${assetId}`);
+      await apiClient.delete(`/api/courses/instructor/assets/${assetId}`);
       fetchCourse();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Không thể xóa video');
@@ -260,14 +260,14 @@ export default function CourseDetailPage() {
   const handleSaveQuiz = async () => {
     try {
       if (quizModal.editing) {
-        await apiClient.put(`/courses/instructor/quizzes/${quizModal.editing.id}`, {
+        await apiClient.put(`/api/courses/instructor/quizzes/${quizModal.editing.id}`, {
           title: quizForm.title,
           pass_score: quizForm.pass_score,
           time_limit_s: quizForm.time_limit_s ? parseInt(quizForm.time_limit_s) : null,
           attempts_allowed: quizForm.attempts_allowed ? parseInt(quizForm.attempts_allowed) : null,
         });
       } else {
-        await apiClient.post(`/courses/instructor/lessons/${quizModal.lessonId}/quizzes`, {
+        await apiClient.post(`/api/courses/instructor/lessons/${quizModal.lessonId}/quizzes`, {
           title: quizForm.title,
           pass_score: quizForm.pass_score,
           time_limit_s: quizForm.time_limit_s ? parseInt(quizForm.time_limit_s) : null,
@@ -284,7 +284,7 @@ export default function CourseDetailPage() {
   const handleDeleteQuiz = async (quizId: number) => {
     if (!confirm('Bạn có chắc chắn muốn xóa quiz này?')) return;
     try {
-      await apiClient.delete(`/courses/instructor/quizzes/${quizId}`);
+      await apiClient.delete(`/api/courses/instructor/quizzes/${quizId}`);
       fetchCourse();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Không thể xóa quiz');

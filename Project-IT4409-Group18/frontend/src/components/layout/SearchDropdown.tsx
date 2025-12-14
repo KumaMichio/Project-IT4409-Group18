@@ -36,7 +36,7 @@ export function SearchDropdown({ keyword, isOpen, onClose, onSelectCourse }: Sea
     const searchCourses = async () => {
       setLoading(true);
       try {
-        const response = await apiClient.get('/courses', {
+        const response = await apiClient.get('/api/courses', {
           params: { q: keyword.trim(), limit: 5 }
         });
         

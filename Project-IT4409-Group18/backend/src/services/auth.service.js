@@ -25,6 +25,22 @@ async function signup({ name, email, password, role }) {
     throw new AuthError(400, 'Missing fields');
   }
 
+  // Email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    throw new AuthError(400, 'Invalid email format');
+  }
+
+  // Password validation
+  if (password.length < 6) {
+    throw new AuthError(400, 'Password must be at least 6 characters');
+  }
+
+  // Name validation
+  if (name.trim().length < 2) {
+    throw new AuthError(400, 'Name must be at least 2 characters');
+  }
+
   // Map role từ frontend sang database enum
   // Frontend: 'student' hoặc 'teacher'
   // Database: 'STUDENT' hoặc 'INSTRUCTOR'
@@ -39,7 +55,18 @@ async function signup({ name, email, password, role }) {
   // Map role sang database enum format
   const dbRole = normalizedRole === 'student' ? 'STUDENT' : 'INSTRUCTOR';
 
-  const existing = await findUserByEmail(email);
+  // Check if user exists
+  let existing;
+  try {
+    existing = await findUserByEmail(email);
+  } catch (error) {
+    // If it's a database connection error, throw it with proper status
+    if (error.message && error.message.includes('Database connection failed')) {
+      throw new AuthError(503, 'Database connection failed. Please try again later.');
+    }
+    throw error;
+  }
+  
   if (existing) {
     throw new AuthError(409, 'Email already in use');
   }
@@ -47,7 +74,26 @@ async function signup({ name, email, password, role }) {
   const passwordHash = await bcrypt.hash(password, 10);
   // Không tạo id nữa, để database tự động generate BIGSERIAL
   const user = { name, email, passwordHash, role: dbRole };
-  const createdUser = await addUser(user);
+  
+  let createdUser;
+  try {
+    createdUser = await addUser(user);
+  } catch (error) {
+    // Handle database errors
+    if (error.message && error.message.includes('Database connection failed')) {
+      throw new AuthError(503, 'Database connection failed. Please try again later.');
+    }
+    if (error.message && error.message.includes('Email already in use')) {
+      throw new AuthError(409, 'Email already in use');
+    }
+    // Re-throw AuthError as-is
+    if (error instanceof AuthError) {
+      throw error;
+    }
+    // For other errors, wrap in AuthError
+    console.error('[AUTH] Unexpected error during user creation:', error);
+    throw new AuthError(500, 'Failed to create user. Please try again.');
+  }
 
   // Map role từ database enum về frontend format cho token và response
   const frontendRole = dbRole === 'STUDENT' ? 'student' : 'teacher';

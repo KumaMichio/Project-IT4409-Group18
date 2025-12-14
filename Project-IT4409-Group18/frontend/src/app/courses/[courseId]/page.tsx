@@ -90,7 +90,7 @@ export default function CourseDetailPage() {
 
   const fetchRelatedCourses = async () => {
     try {
-      const response = await apiClient.get(`/courses/${courseId}/related`);
+      const response = await apiClient.get(`/api/courses/${courseId}/related`);
       setRelatedCourses(response.data);
     } catch (error: any) {
       console.error('Error fetching related courses:', error);
@@ -104,7 +104,7 @@ export default function CourseDetailPage() {
     try {
       // Get course detail - token will be sent automatically via apiClient
       // This now includes modules and lessons for all users
-      const detailResponse = await apiClient.get(`/courses/${courseId}`);
+      const detailResponse = await apiClient.get(`/api/courses/${courseId}`);
       setCourseDetail(detailResponse.data);
     } catch (error) {
       console.error('Error fetching course detail:', error);
@@ -155,7 +155,7 @@ export default function CourseDetailPage() {
     if (courseDetail.course.price_cents === 0) {
       try {
         setAddingToCart(true);
-        const response = await apiClient.post('/enrollments/enroll', {
+        const response = await apiClient.post('/api/enrollments/enroll', {
           courseId: courseDetail.course.id
         });
         toast.success('Đã đăng ký khóa học miễn phí thành công!');
@@ -220,7 +220,7 @@ export default function CourseDetailPage() {
     if (courseDetail.course.price_cents === 0) {
       try {
         setAddingToCart(true);
-        const response = await apiClient.post('/enrollments/enroll', {
+        const response = await apiClient.post('/api/enrollments/enroll', {
           courseId: courseDetail.course.id
         });
         toast.success('Đã đăng ký khóa học miễn phí thành công!');

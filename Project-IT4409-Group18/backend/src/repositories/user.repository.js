@@ -28,11 +28,22 @@ async function getUsers() {
 }
 
 async function findUserByEmail(email) {
-  const res = await pool.query(
-    'SELECT id, email, password_hash, full_name, role FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1',
-    [email]
-  );
-  return mapRow(res.rows[0]);
+  try {
+    const res = await pool.query(
+      'SELECT id, email, password_hash, full_name, role FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1',
+      [email]
+    );
+    return mapRow(res.rows[0]);
+  } catch (error) {
+    console.error('[DB] Error finding user by email:', error);
+    
+    // Handle database connection errors
+    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+      throw new Error('Database connection failed. Please check your database configuration.');
+    }
+    
+    throw error;
+  }
 }
 
 /**
@@ -46,23 +57,41 @@ async function addUser(user) {
   // Role phải là enum value: 'STUDENT', 'INSTRUCTOR', hoặc 'ADMIN'
   const role = user.role || 'STUDENT';
 
-  // Không truyền id, để database tự động generate BIGSERIAL
-  // Sử dụng RETURNING để lấy id vừa được tạo
-  const result = await pool.query(
-    `INSERT INTO users (email, password_hash, full_name, role)
-     VALUES ($1, $2, $3, $4)
-     RETURNING id`,
-    [user.email, passwordHash, fullName, role]
-  );
+  try {
+    // Không truyền id, để database tự động generate BIGSERIAL
+    // Sử dụng RETURNING để lấy id vừa được tạo
+    const result = await pool.query(
+      `INSERT INTO users (email, password_hash, full_name, role)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id`,
+      [user.email, passwordHash, fullName, role]
+    );
 
-  const id = result.rows[0].id;
+    const id = result.rows[0].id;
 
-  return {
-    id,
-    name: fullName,
-    email: user.email,
-    role,
-  };
+    return {
+      id,
+      name: fullName,
+      email: user.email,
+      role,
+    };
+  } catch (error) {
+    console.error('[DB] Error adding user:', error);
+    
+    // Handle specific database errors
+    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+      throw new Error('Database connection failed. Please check your database configuration.');
+    }
+    if (error.code === '23505') { // Unique violation
+      throw new Error('Email already in use');
+    }
+    if (error.code === '23514') { // Check constraint violation
+      throw new Error('Invalid data provided');
+    }
+    
+    // Re-throw with more context
+    throw new Error(`Database error: ${error.message}`);
+  }
 }
 
 /**

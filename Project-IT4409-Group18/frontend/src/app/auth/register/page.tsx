@@ -32,6 +32,13 @@ export default function RegisterPage() {
       return;
     }
 
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setFormError('Please enter a valid email address');
+      return;
+    }
+
     if (password.length < 6) {
       setFormError('Password must be at least 6 characters');
       return;
@@ -45,7 +52,13 @@ export default function RegisterPage() {
     try {
       await register({ name, email, password, role });
     } catch (error: any) {
-      setFormError(error.message || 'Registration failed');
+      // Extract more specific error message
+      const errorMessage = 
+        error?.response?.data?.error || 
+        error?.message || 
+        'Registration failed. Please try again.';
+      setFormError(errorMessage);
+      console.error('Registration error:', error);
     }
   };
 

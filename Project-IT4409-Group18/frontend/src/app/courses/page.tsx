@@ -39,7 +39,7 @@ export default function CoursesPage() {
         params.q = trimmedKeyword;
       }
       
-      const response = await apiClient.get('/courses', { params });
+      const response = await apiClient.get('/api/courses', { params });
       setCourses(response.data.courses || []);
       setTotalResults(response.data.pagination?.total || 0);
     } catch (error) {

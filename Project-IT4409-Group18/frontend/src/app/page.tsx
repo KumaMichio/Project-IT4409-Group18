@@ -33,7 +33,7 @@ export default function Home() {
     setLoading(true);
     try {
       const params: any = { page: 1, limit: 12 };
-      const response = await apiClient.get('/courses', { params });
+      const response = await apiClient.get('/api/courses', { params });
       setCourses(response.data.courses || []);
     } catch (error) {
       console.error('Failed to fetch courses:', error);

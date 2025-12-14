@@ -107,7 +107,7 @@ export default function NewCoursePage() {
     try {
       setLoading(true);
       // Step 1: Create course
-      const response = await apiClient.post('/courses/instructor/my-courses', formData);
+      const response = await apiClient.post('/api/courses/instructor/my-courses', formData);
       const courseId = response.data.id;
 
       // Step 2: Add modules, lessons, videos, quizzes
@@ -115,7 +115,7 @@ export default function NewCoursePage() {
         const module = modules[moduleIndex];
         
         // Create module
-        const moduleResponse = await apiClient.post(`/courses/instructor/my-courses/${courseId}/modules`, {
+        const moduleResponse = await apiClient.post(`/api/courses/instructor/my-courses/${courseId}/modules`, {
           title: module.title,
           position: module.position,
         });
@@ -126,7 +126,7 @@ export default function NewCoursePage() {
           const lesson = module.lessons[lessonIndex];
           
           // Create lesson
-          const lessonResponse = await apiClient.post(`/courses/instructor/modules/${moduleId}/lessons`, {
+          const lessonResponse = await apiClient.post(`/api/courses/instructor/modules/${moduleId}/lessons`, {
             title: lesson.title,
             position: lesson.position,
             duration_s: lesson.duration_s ? parseInt(lesson.duration_s.toString()) : null,
@@ -151,7 +151,7 @@ export default function NewCoursePage() {
               });
             } else {
               // Add URL
-              await apiClient.post(`/courses/instructor/lessons/${lessonId}/assets`, {
+              await apiClient.post(`/api/courses/instructor/lessons/${lessonId}/assets`, {
                 asset_kind: asset.asset_kind,
                 url: asset.url,
                 position: asset.position,
@@ -161,7 +161,7 @@ export default function NewCoursePage() {
 
           // Add quiz if exists
           if (lesson.quiz) {
-            await apiClient.post(`/courses/instructor/lessons/${lessonId}/quizzes`, {
+            await apiClient.post(`/api/courses/instructor/lessons/${lessonId}/quizzes`, {
               title: lesson.quiz.title,
               pass_score: lesson.quiz.pass_score,
               time_limit_s: lesson.quiz.time_limit_s ? parseInt(lesson.quiz.time_limit_s.toString()) : null,

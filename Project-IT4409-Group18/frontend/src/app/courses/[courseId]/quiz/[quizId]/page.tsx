@@ -132,7 +132,7 @@ export default function QuizPage() {
     
     try {
       setLoadingNextLesson(true);
-      const response = await apiClient.get(`/courses/${courseId}/content`);
+      const response = await apiClient.get(`/api/courses/${courseId}/content`);
       const modules: Module[] = response.data.modules || [];
       
       // Flatten all lessons with their module info
