@@ -106,6 +106,7 @@ export function usePayment() {
         orderId: number;
         orderNumber: string;
         paymentUrl: string | null;
+        qrCodeUrl?: string | null;
         paymentId: number;
         isFree?: boolean;
         message?: string;
@@ -122,8 +123,15 @@ export function usePayment() {
 
       // Redirect to payment gateway for paid courses
       if (response.data.paymentUrl) {
-        console.log('Redirecting to payment URL...');
-        window.location.href = response.data.paymentUrl;
+        // Nếu có QR code URL (SePay), redirect đến trang hiển thị QR code
+        if (response.data.qrCodeUrl && paymentProvider === 'SEPAY') {
+          console.log('Redirecting to QR code page...');
+          router.push(`/payments/qr-code?orderNumber=${response.data.orderNumber}&paymentUrl=${encodeURIComponent(response.data.paymentUrl)}&qrCodeUrl=${encodeURIComponent(response.data.qrCodeUrl)}`);
+        } else {
+          // VNPay hoặc SePay không có QR code: redirect trực tiếp
+          console.log('Redirecting to payment URL...');
+          window.location.href = response.data.paymentUrl;
+        }
       } else {
         throw new Error('Không nhận được payment URL');
       }

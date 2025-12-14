@@ -36,12 +36,12 @@ export default function PaymentSuccessPage() {
 
   // Auto-redirect to first course after successful payment
   useEffect(() => {
-    if (order && order.items && order.items.length > 0) {
+    if (order && order.items && order.items.length > 0 && order.status === 'PAID') {
       // Redirect to the first course's learn page after a short delay to show success message
       const firstCourseId = order.items[0].course_id;
       const timer = setTimeout(() => {
         router.push(`/courses/${firstCourseId}/learn`);
-      }, 1500); // Wait 1.5 seconds to show success message
+      }, 2000); // Wait 2 seconds to show success message
 
       return () => clearTimeout(timer);
     }

@@ -15,6 +15,7 @@ export default function CheckoutPage() {
   const { isAuthenticated } = useAuth();
   const { checkoutInfo, getCheckoutInfo, createOrder, loading, formatPrice } = usePayment();
   const [creatingOrder, setCreatingOrder] = useState(false);
+  const [selectedPaymentProvider, setSelectedPaymentProvider] = useState<'VNPAY' | 'SEPAY'>('VNPAY');
 
   useEffect(() => {
     // Check token directly
@@ -36,9 +37,9 @@ export default function CheckoutPage() {
 
     try {
       setCreatingOrder(true);
-      await createOrder('VNPAY');
+      await createOrder(selectedPaymentProvider);
       // For free courses, user will be redirected to success page
-      // For paid courses, user will be redirected to VNPay
+      // For paid courses, user will be redirected to payment gateway
     } catch (error: any) {
       // Error already handled in usePayment
       console.error('Checkout error:', error);
@@ -157,14 +158,38 @@ export default function CheckoutPage() {
               {/* Payment Method */}
               <div className="mb-6">
                 <h3 className="font-semibold mb-3">Phương thức thanh toán</h3>
-                <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
-                  <div className="flex items-center gap-3">
+                <div className="space-y-2">
+                  <label className="flex items-center gap-3 p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50">
+                    <input
+                      type="radio"
+                      name="paymentProvider"
+                      value="VNPAY"
+                      checked={selectedPaymentProvider === 'VNPAY'}
+                      onChange={(e) => setSelectedPaymentProvider(e.target.value as 'VNPAY')}
+                      className="w-4 h-4 text-blue-600"
+                    />
                     <CreditCardOutlined className="text-2xl text-blue-600" />
-                    <div>
+                    <div className="flex-1">
                       <p className="font-semibold">VNPay</p>
                       <p className="text-sm text-gray-500">Thanh toán qua VNPay</p>
                     </div>
-                  </div>
+                  </label>
+                  
+                  <label className="flex items-center gap-3 p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition has-[:checked]:border-green-600 has-[:checked]:bg-green-50">
+                    <input
+                      type="radio"
+                      name="paymentProvider"
+                      value="SEPAY"
+                      checked={selectedPaymentProvider === 'SEPAY'}
+                      onChange={(e) => setSelectedPaymentProvider(e.target.value as 'SEPAY')}
+                      className="w-4 h-4 text-green-600"
+                    />
+                    <CreditCardOutlined className="text-2xl text-green-600" />
+                    <div className="flex-1">
+                      <p className="font-semibold">SePay</p>
+                      <p className="text-sm text-gray-500">Thanh toán tự động qua SePay</p>
+                    </div>
+                  </label>
                 </div>
               </div>
 
