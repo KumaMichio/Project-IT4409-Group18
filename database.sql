@@ -16,7 +16,7 @@ DO $$ BEGIN
 END $$;
 
 DO $$ BEGIN
-  CREATE TYPE payment_provider AS ENUM ('VNPAY', 'MOMO', 'OTHER');
+  CREATE TYPE payment_provider AS ENUM ('VNPAY', 'MOMO', 'OTHER', 'SEPAY');
   EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
