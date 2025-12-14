@@ -321,6 +321,32 @@ export default function ChatIndexPage() {
           </div>
         </div>
 
+        {/* Tư vấn với Chatbot Section */}
+        <div className="mt-6 bg-white rounded-lg shadow-lg p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-lg">
+              🤖
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Tư vấn với Chatbot
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Nhận tư vấn nhanh chóng về khóa học, lộ trình học tập và các câu hỏi thường gặp
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/chat/bot"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            Bắt đầu tư vấn
+          </Link>
+        </div>
+
         {/* Quick Access */}
         <div className="mt-6 bg-white rounded-lg shadow-lg p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Truy cập nhanh</h2>
@@ -335,6 +361,10 @@ export default function ChatIndexPage() {
                 /chat/dm/[studentId]/[instructorId]
               </code>
             </div>
+            <div className="text-sm text-gray-600">
+              <strong>Bot Chat:</strong> Truy cập{' '}
+              <code className="bg-gray-100 px-2 py-1 rounded">/chat/bot</code>
+            </div>
           </div>
         </div>
       </div>
@@ -342,92 +372,146 @@ export default function ChatIndexPage() {
       {/* New DM Modal for Students */}
       {user?.role === 'student' && (
         <dialog id="new-dm-modal" className="modal">
-          <div className="modal-box max-w-2xl">
-            <h3 className="font-bold text-lg mb-4">Tin nhắn mới</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Chọn giảng viên để bắt đầu cuộc trò chuyện
-            </p>
-
-            {/* Search input */}
-            <div className="mb-4">
-              <input
-                type="text"
-                placeholder="Tìm kiếm giảng viên..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+          <div className="modal-box max-w-2xl w-full p-0 bg-white rounded-xl shadow-2xl">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4 rounded-t-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg text-white">Tin nhắn mới</h3>
+                    <p className="text-sm text-white/90">
+                      Chọn giảng viên để bắt đầu cuộc trò chuyện
+                    </p>
+                  </div>
+                </div>
+                <form method="dialog">
+                  <button className="btn btn-sm btn-circle btn-ghost text-white hover:bg-white/20">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </form>
+              </div>
             </div>
 
-            {/* Instructors list */}
-            <div className="max-h-96 overflow-y-auto">
-              {isLoadingInstructors ? (
-                <div className="text-gray-500 text-center py-8">Đang tải...</div>
-              ) : filteredInstructors.length === 0 ? (
-                <div className="text-gray-500 text-center py-8">
-                  {searchQuery ? 'Không tìm thấy giảng viên' : 'Không có giảng viên nào'}
+            {/* Content */}
+            <div className="p-6">
+              {/* Search input */}
+              <div className="mb-4">
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm giảng viên theo tên hoặc email..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  />
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  {filteredInstructors.map((instructor) => {
-                    // Check if thread already exists
-                    const existingThread = threads.find(
-                      (t) => t.instructor_id === instructor.id
-                    );
+              </div>
 
-                    return (
-                      <button
-                        key={instructor.id}
-                        onClick={() => {
-                          if (existingThread) {
-                            router.push(
-                              `/chat/dm/${user.id}/${instructor.id}`
-                            );
-                          } else {
-                            handleStartDM(instructor.id);
-                          }
-                          const modal = document.getElementById('new-dm-modal');
-                          if (modal) {
-                            (modal as HTMLDialogElement).close();
-                          }
-                        }}
-                        className="w-full p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors text-left"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
-                              {instructor.name.charAt(0).toUpperCase()}
+              {/* Instructors list */}
+              <div className="max-h-96 overflow-y-auto custom-scrollbar">
+                {isLoadingInstructors ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-3"></div>
+                    <p className="text-gray-500">Đang tải danh sách giảng viên...</p>
+                  </div>
+                ) : filteredInstructors.length === 0 ? (
+                  <div className="text-center py-12">
+                    <svg
+                      className="mx-auto h-12 w-12 text-gray-400 mb-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <p className="text-gray-500 font-medium">
+                      {searchQuery ? 'Không tìm thấy giảng viên' : 'Không có giảng viên nào'}
+                    </p>
+                    {searchQuery && (
+                      <p className="text-sm text-gray-400 mt-1">Thử tìm kiếm với từ khóa khác</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredInstructors.map((instructor) => {
+                      // Check if thread already exists
+                      const existingThread = threads.find(
+                        (t) => t.instructor_id === instructor.id
+                      );
+
+                      return (
+                        <button
+                          key={instructor.id}
+                          onClick={() => {
+                            if (existingThread) {
+                              router.push(
+                                `/chat/dm/${user.id}/${instructor.id}`
+                              );
+                            } else {
+                              handleStartDM(instructor.id);
+                            }
+                            const modal = document.getElementById('new-dm-modal');
+                            if (modal) {
+                              (modal as HTMLDialogElement).close();
+                            }
+                          }}
+                          className="w-full p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition-all duration-200 text-left group"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-lg flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow">
+                                {instructor.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                                  {instructor.name}
+                                </h4>
+                                <p className="text-sm text-gray-500 truncate mt-0.5">
+                                  {instructor.email}
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <h4 className="font-medium text-gray-900">
-                                {instructor.name}
-                              </h4>
-                              <p className="text-sm text-gray-500">
-                                {instructor.email}
-                              </p>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {existingThread && (
+                                <span className="text-xs font-medium text-blue-600 bg-blue-100 px-3 py-1 rounded-full">
+                                  Đã có cuộc trò chuyện
+                                </span>
+                              )}
+                              <svg
+                                className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
                             </div>
                           </div>
-                          {existingThread && (
-                            <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
-                              Đã có cuộc trò chuyện
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="modal-action">
-              <form method="dialog">
-                <button className="btn">Đóng</button>
-              </form>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-          <form method="dialog" className="modal-backdrop">
-            <button>đóng</button>
+          <form method="dialog" className="modal-backdrop bg-black/50 backdrop-blur-sm">
+            <button className="hidden"></button>
           </form>
         </dialog>
       )}

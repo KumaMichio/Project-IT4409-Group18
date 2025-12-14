@@ -237,6 +237,46 @@ async function getInstructors(req, res, next) {
   }
 }
 
+// ===== BOT CHAT =====
+
+/**
+ * GET /api/chat/bot/messages
+ * Get bot chat messages for current user
+ */
+async function getBotMessages(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const limit = parseInt(req.query.limit) || 50;
+    const beforeId = req.query.beforeId ? parseInt(req.query.beforeId) : null;
+
+    const result = await chatService.getBotMessages(userId, limit, beforeId);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/chat/bot/messages
+ * Send message to bot and get response
+ */
+async function sendBotMessage(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { content, conversationHistory } = req.body; // Frontend gửi conversation history
+
+    if (!content) {
+      return res.status(400).json({ error: 'Nội dung tin nhắn là bắt buộc' });
+    }
+
+    // Pass conversation history từ frontend (không lưu vào database)
+    const result = await chatService.sendBotMessage(userId, content, conversationHistory || []);
+    res.status(201).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   // Course channel
   getCourseChannel,
@@ -252,5 +292,8 @@ module.exports = {
   sendDMMessage,
   getChatUserInfo,
   getInstructors,
+  // Bot chat
+  getBotMessages,
+  sendBotMessage,
 };
 

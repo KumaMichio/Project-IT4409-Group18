@@ -300,3 +300,77 @@ export function useDMThreads() {
   return { threads, isLoading, error };
 }
 
+/**
+ * Hook for chatbot consultation (không lưu lịch sử)
+ */
+export function useBotChat() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isConnected, setIsConnected] = useState(true); // Always connected (no socket needed)
+  const [error, setError] = useState<string | null>(null);
+
+  // Không load messages từ server (vì không lưu lịch sử)
+  // Messages chỉ tồn tại trong session hiện tại
+
+  const sendMessage = useCallback(
+    async (content: string) => {
+      if (!content.trim()) return;
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Add user message to UI immediately
+        const userMessage: Message = {
+          id: Date.now(),
+          content,
+          sender_id: undefined, // Will be set by backend
+          sender_name: 'Bạn',
+          created_at: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, userMessage]);
+
+        // Build conversation history from current messages (last 10)
+        const recentMessages = messages.slice(-10);
+        const conversationHistory = recentMessages.map((msg) => ({
+          role: msg.sender_name === 'Chatbot' || msg.sender_name === 'Bot' ? 'assistant' : 'user',
+          content: msg.content,
+        }));
+
+        // Send to backend
+        const response = await apiClient.post('/api/chat/bot/messages', {
+          content,
+          conversationHistory,
+        });
+
+        // Add bot response
+        if (response.data.message) {
+          const botMessage: Message = {
+            id: response.data.message.id || Date.now() + 1,
+            content: response.data.message.content,
+            sender_id: undefined,
+            sender_name: 'Chatbot',
+            created_at: response.data.message.created_at || new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, botMessage]);
+        }
+      } catch (err: any) {
+        setError(err.response?.data?.error || err.message || 'Failed to send message');
+        // Remove user message on error
+        setMessages((prev) => prev.slice(0, -1));
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [messages]
+  );
+
+  return {
+    messages,
+    isLoading,
+    isConnected,
+    error,
+    sendMessage,
+  };
+}
+

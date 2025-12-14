@@ -46,5 +46,13 @@ router.get('/users/:userId', chatController.getChatUserInfo);
 // Get list of instructors (for students to start new DM)
 router.get('/instructors', chatController.getInstructors);
 
+// ===== BOT CHAT ROUTES =====
+
+// Get bot chat messages
+router.get('/bot/messages', chatController.getBotMessages);
+
+// Send message to bot
+router.post('/bot/messages', chatController.sendBotMessage);
+
 module.exports = router;
 
