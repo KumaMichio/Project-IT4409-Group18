@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Button, Card, Space, Typography, Progress, message, Spin } from 'antd';
-import { ClockCircleOutlined, ArrowLeftOutlined, HomeOutlined, ArrowRightOutlined } from '@ant-design/icons';
+import { Button, Card, Space, Typography, Progress, message, Spin, Modal, List } from 'antd';
+import { ClockCircleOutlined, ArrowLeftOutlined, HomeOutlined, ArrowRightOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import apiClient from '../../../../../lib/apiClient';
 import QuizQuestion, { QuizQuestionData } from '../../../../../components/quiz/QuizQuestion';
 import QuizResult from '../../../../../components/quiz/QuizResult';
@@ -53,6 +53,8 @@ export default function QuizPage() {
   const [currentLessonId, setCurrentLessonId] = useState<number | null>(null);
   const [nextLessonId, setNextLessonId] = useState<number | null>(null);
   const [loadingNextLesson, setLoadingNextLesson] = useState(false);
+  const [showAttemptsModal, setShowAttemptsModal] = useState(false);
+  const [previousAttempts, setPreviousAttempts] = useState<any[]>([]);
 
   useEffect(() => {
     if (user?.id) {
@@ -95,25 +97,65 @@ export default function QuizPage() {
         router.push('/auth/login');
         return;
       }
-      console.log('Creating quiz attempt for quiz:', quizId, 'student:', user.id);
-      const attemptResponse = await apiClient.post(`/quizzes/${quizId}/attempts`, {
-        studentId: user.id
-      });
+      console.log('Creating quiz attempt for quiz:', quizId);
+      const attemptResponse = await apiClient.post(`/quizzes/${quizId}/attempts`);
       console.log('Attempt created:', attemptResponse.data);
-      setAttemptId(attemptResponse.data.attemptId);
+      const attemptId = attemptResponse.data.attemptId || attemptResponse.data.id;
+      setAttemptId(attemptId);
+      
+      // Check if this is a passed attempt (review mode)
+      if (attemptResponse.data.submitted_at && attemptResponse.data.passed) {
+        console.log('This is a passed attempt, loading in review mode');
+        setSubmitted(true);
+        setPassed(true);
+        setScore(attemptResponse.data.score || 0);
+        setTimeLeft(0); // Stop timer
+        message.info('Bạn đã hoàn thành quiz này. Đang xem lại kết quả.');
+        
+        // Load previous answers and quiz with correct answers
+        try {
+          const [answersResponse, quizWithAnswersResponse] = await Promise.all([
+            apiClient.get(`/quizzes/${quizId}/attempts/${attemptId}/answers`),
+            apiClient.get(`/quizzes/${quizId}?includeCorrectAnswers=true`)
+          ]);
+          
+          // Set previous answers
+          const previousAnswers: Record<number, number | number[]> = {};
+          answersResponse.data.forEach((answer: any) => {
+            const optionIds = answer.selected_option_ids || [];
+            previousAnswers[answer.question_id] = optionIds.length === 1 ? optionIds[0] : optionIds;
+          });
+          setAnswers(previousAnswers);
+          
+          // Update quiz with correct answers
+          if (quizWithAnswersResponse.data) {
+            setQuiz(quizWithAnswersResponse.data);
+          }
+          
+          fetchNextLesson();
+        } catch (err) {
+          console.error('Error loading review data:', err);
+        }
+      }
     } catch (error: any) {
       console.error('Error fetching quiz:', error);
       console.error('Error response:', error.response?.data);
       console.error('Error status:', error.response?.status);
       
       if (error.response?.status === 403) {
+        // Fetch previous attempts
+        try {
+          const attemptsResponse = await apiClient.get(`/quizzes/${quizId}/attempts`);
+          setPreviousAttempts(attemptsResponse.data || []);
+        } catch (err) {
+          console.error('Error fetching attempts:', err);
+        }
+        
         const errorMessage = error.response?.data?.message || 'Bạn đã hết lượt làm bài quiz này';
-        message.error(errorMessage);
-        // Don't redirect immediately, let user see the error message
-        // They can manually navigate back using browser back button
-        setTimeout(() => {
-          router.push(`/courses/${courseId}/learn`);
-        }, 2000);
+        const alreadyPassed = error.response?.data?.alreadyPassed || false;
+        
+        message.warning(errorMessage);
+        setShowAttemptsModal(true);
       } else if (error.response?.status === 401) {
         message.error('Vui lòng đăng nhập để làm quiz');
         setTimeout(() => {
@@ -177,7 +219,12 @@ export default function QuizPage() {
   };
 
   const handleSubmit = async () => {
-    if (submitted || !quiz || !attemptId) return;
+    if (submitted || !quiz || !attemptId) {
+      if (submitted) {
+        message.warning('Bạn đã hoàn thành quiz này rồi!');
+      }
+      return;
+    }
 
     const unanswered = quiz.questions.filter(q => !(q.id in answers));
     if (unanswered.length > 0) {
@@ -380,7 +427,85 @@ export default function QuizPage() {
             </Card>
           )}
         </div>
-      </div>
+        {/* Modal hiển thị danh sách attempts trước đó */}
+        <Modal
+          title={previousAttempts.some((a: any) => a.passed) ? "🎉 Bạn đã hoàn thành quiz này" : "Bạn đã hết lượt làm bài"}
+          open={showAttemptsModal}
+          onCancel={() => {
+            setShowAttemptsModal(false);
+            router.push(`/courses/${courseId}/learn`);
+          }}
+          footer={[
+            <Button key="back" onClick={() => {
+              setShowAttemptsModal(false);
+              router.push(`/courses/${courseId}/learn`);
+            }}>
+              Quay lại bài học
+            </Button>
+          ]}
+          width={700}
+        >
+          <div className="mb-4">
+            {previousAttempts.some((a: any) => a.passed) ? (
+              <Text className="text-green-600">
+                Chúc mừng! Bạn đã hoàn thành quiz này. Dưới đây là kết quả các lần làm bài:
+              </Text>
+            ) : (
+              <Text>
+                Bạn đã sử dụng hết số lần làm bài cho quiz này. Dưới đây là kết quả các lần làm bài trước:
+              </Text>
+            )}
+          </div>
+          
+          <List
+            dataSource={previousAttempts}
+            renderItem={(attempt: any, index: number) => (
+              <List.Item key={attempt.id}>
+                <Card className="w-full" size="small">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <Space direction="vertical" size="small">
+                        <Text strong>Lần {attempt.attempt_no}</Text>
+                        <Text type="secondary">
+                          {new Date(attempt.submitted_at || attempt.started_at).toLocaleString('vi-VN')}
+                        </Text>
+                      </Space>
+                    </div>
+                    
+                    <div className="flex items-center gap-4">
+                      {attempt.submitted_at ? (
+                        <>
+                          <div className="text-center">
+                            <Text strong className="text-lg">{attempt.score_percent}%</Text>
+                            <br />
+                            <Text type="secondary" className="text-sm">Điểm số</Text>
+                          </div>
+                          
+                          <div>
+                            {attempt.passed ? (
+                              <Space>
+                                <CheckCircleOutlined className="text-green-500 text-xl" />
+                                <Text className="text-green-600 font-medium">Đạt</Text>
+                              </Space>
+                            ) : (
+                              <Space>
+                                <CloseCircleOutlined className="text-red-500 text-xl" />
+                                <Text className="text-red-600 font-medium">Chưa đạt</Text>
+                              </Space>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <Text type="warning">Chưa nộp bài</Text>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              </List.Item>
+            )}
+            locale={{ emptyText: 'Chưa có lần làm bài nào' }}
+          />
+        </Modal>      </div>
     </div>
   );
 }

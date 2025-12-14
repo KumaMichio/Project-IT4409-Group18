@@ -92,13 +92,15 @@ const getAllCourses = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 12;
     const keyword = req.query.q || req.query.keyword || '';
+    const tags = req.query.tags || null;
     
     // Parse filter params
     const filters = {
       priceRange: req.query.price_range || null, // 'free', 'under_100k', '100k_500k', '500k_1m', 'over_1m'
       minRating: req.query.min_rating || null,    // '3.0', '3.5', '4.0', '4.5'
       sortBy: req.query.sort_by || null,          // 'price', 'rating', 'date'
-      sortOrder: req.query.sort_order || 'desc'   // 'asc', 'desc'
+      sortOrder: req.query.sort_order || 'desc',   // 'asc', 'desc'
+      tags: tags  // Add tags to filters
     };
     
     // Validate price_range
@@ -558,6 +560,17 @@ const getAllStudents = async (req, res) => {
   }
 };
 
+// Get all tags
+const getTags = async (req, res) => {
+  try {
+    const tags = await courseService.getTags();
+    res.json(tags);
+  } catch (error) {
+    console.error('Error fetching tags:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 module.exports = {
   getCourseContent,
   getCourseProgress,
@@ -595,4 +608,6 @@ module.exports = {
   // Student management
   getStudentsByCourse,
   getAllStudents,
+  // Tags
+  getTags,
 };

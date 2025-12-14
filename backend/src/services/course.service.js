@@ -453,6 +453,14 @@ class CourseService {
   async getAllStudentsByInstructor(instructorId) {
     return await courseRepository.getAllStudentsByInstructor(instructorId);
   }
+
+  // ==== TAGS ====
+  
+  async getTags() {
+    const pool = require('../config/db');
+    const result = await pool.query('SELECT id, name FROM tags ORDER BY name ASC');
+    return result.rows;
+  }
 }
 
 module.exports = new CourseService();

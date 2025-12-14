@@ -17,7 +17,6 @@ const updateLessonProgress = async (req, res) => {
     if (error.status) {
       return res.status(error.status).json({ error: error.message });
     }
-    console.error('Error updating lesson progress:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -38,7 +37,6 @@ const markLessonComplete = async (req, res) => {
     if (error.status) {
       return res.status(error.status).json({ error: error.message });
     }
-    console.error('Error marking lesson complete:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };

@@ -316,7 +316,7 @@ class CourseRepository {
   }
 
   async getAllPublishedCourses(limit = 50, offset = 0, filters = {}) {
-    const { priceRange, minRating, sortBy, sortOrder } = filters;
+    const { priceRange, minRating, sortBy, sortOrder, tags } = filters;
     
     // Build WHERE conditions
     const whereConditions = ['c.is_published = true'];
@@ -325,6 +325,16 @@ class CourseRepository {
     const priceFilter = this.buildPriceFilter(priceRange);
     if (priceFilter) {
       whereConditions.push(priceFilter);
+    }
+    
+    // Add tags filter
+    let tagsJoin = '';
+    if (tags) {
+      tagsJoin = `
+        INNER JOIN course_tags ct ON c.id = ct.course_id
+        INNER JOIN tags t ON ct.tag_id = t.id
+      `;
+      whereConditions.push(`t.name = '${tags.replace(/'/g, "''")}'`);
     }
     
     const whereClause = whereConditions.join(' AND ');
@@ -351,6 +361,7 @@ class CourseRepository {
         COUNT(DISTINCT cr.id) as review_count
       FROM courses c
       JOIN users u ON c.instructor_id = u.id
+      ${tagsJoin}
       LEFT JOIN enrollments e ON c.id = e.course_id AND e.status = 'ACTIVE'
       LEFT JOIN course_reviews cr ON c.id = cr.course_id
       WHERE ${whereClause}
@@ -365,7 +376,7 @@ class CourseRepository {
   }
 
   async countPublishedCourses(filters = {}) {
-    const { priceRange, minRating } = filters;
+    const { priceRange, minRating, tags } = filters;
     
     // Build WHERE conditions
     const whereConditions = ['c.is_published = true'];
@@ -374,6 +385,16 @@ class CourseRepository {
     const priceFilter = this.buildPriceFilter(priceRange);
     if (priceFilter) {
       whereConditions.push(priceFilter);
+    }
+    
+    // Add tags filter
+    let tagsJoin = '';
+    if (tags) {
+      tagsJoin = `
+        INNER JOIN course_tags ct ON c.id = ct.course_id
+        INNER JOIN tags t ON ct.tag_id = t.id
+      `;
+      whereConditions.push(`t.name = '${tags.replace(/'/g, "''")}'`);
     }
     
     const whereClause = whereConditions.join(' AND ');
@@ -386,6 +407,7 @@ class CourseRepository {
           SELECT c.id
           FROM courses c
           JOIN users u ON c.instructor_id = u.id
+          ${tagsJoin}
           LEFT JOIN course_reviews cr ON c.id = cr.course_id
           WHERE ${whereClause}
           GROUP BY c.id
@@ -397,13 +419,18 @@ class CourseRepository {
     }
     
     // No rating filter, simple count
-    const query = `SELECT COUNT(*) as total FROM courses c WHERE ${whereClause}`;
+    const query = `
+      SELECT COUNT(DISTINCT c.id) as total 
+      FROM courses c 
+      ${tagsJoin}
+      WHERE ${whereClause}
+    `;
     const result = await pool.query(query);
     return parseInt(result.rows[0].total);
   }
 
   async searchCourses(keyword, limit = 50, offset = 0, filters = {}) {
-    const { priceRange, minRating, sortBy, sortOrder } = filters;
+    const { priceRange, minRating, sortBy, sortOrder, tags } = filters;
     const searchTerm = `%${keyword}%`;
     
     // Build WHERE conditions
@@ -420,6 +447,16 @@ class CourseRepository {
     const priceFilter = this.buildPriceFilter(priceRange);
     if (priceFilter) {
       whereConditions.push(priceFilter);
+    }
+    
+    // Add tags filter
+    let tagsJoin = '';
+    if (tags) {
+      tagsJoin = `
+        INNER JOIN course_tags ct ON c.id = ct.course_id
+        INNER JOIN tags t ON ct.tag_id = t.id
+      `;
+      whereConditions.push(`t.name = '${tags.replace(/'/g, "''")}'`);
     }
     
     const whereClause = whereConditions.join(' AND ');
@@ -460,6 +497,7 @@ class CourseRepository {
         COUNT(DISTINCT cr.id) as review_count
       FROM courses c
       JOIN users u ON c.instructor_id = u.id
+      ${tagsJoin}
       LEFT JOIN enrollments e ON c.id = e.course_id AND e.status = 'ACTIVE'
       LEFT JOIN course_reviews cr ON c.id = cr.course_id
       WHERE ${whereClause}
@@ -474,7 +512,7 @@ class CourseRepository {
   }
 
   async countSearchResults(keyword, filters = {}) {
-    const { priceRange, minRating } = filters;
+    const { priceRange, minRating, tags } = filters;
     const searchTerm = `%${keyword}%`;
     
     // Build WHERE conditions
@@ -493,6 +531,16 @@ class CourseRepository {
       whereConditions.push(priceFilter);
     }
     
+    // Add tags filter
+    let tagsJoin = '';
+    if (tags) {
+      tagsJoin = `
+        INNER JOIN course_tags ct ON c.id = ct.course_id
+        INNER JOIN tags t ON ct.tag_id = t.id
+      `;
+      whereConditions.push(`t.name = '${tags.replace(/'/g, "''")}'`);
+    }
+    
     const whereClause = whereConditions.join(' AND ');
     
     // If rating filter, need to use subquery with GROUP BY and HAVING
@@ -503,6 +551,7 @@ class CourseRepository {
           SELECT c.id
           FROM courses c
           JOIN users u ON c.instructor_id = u.id
+          ${tagsJoin}
           LEFT JOIN course_reviews cr ON c.id = cr.course_id
           WHERE ${whereClause}
           GROUP BY c.id
@@ -518,6 +567,7 @@ class CourseRepository {
       SELECT COUNT(DISTINCT c.id) as total
       FROM courses c
       JOIN users u ON c.instructor_id = u.id
+      ${tagsJoin}
       WHERE ${whereClause}
     `;
     const result = await pool.query(query, [searchTerm]);

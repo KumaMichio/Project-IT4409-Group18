@@ -1,14 +1,26 @@
 const quizRepository = require('../repositories/quiz.repository');
 
 class QuizService {
-  async getQuiz(quizId) {
-    return await quizRepository.getQuizById(quizId);
+  async getQuiz(quizId, includeCorrectAnswers = false) {
+    return await quizRepository.getQuizById(quizId, includeCorrectAnswers);
   }
 
   async createAttempt(quizId, studentId) {
+    console.log(`[SERVICE] createAttempt called - quizId: ${quizId}, studentId: ${studentId}`);
     const quiz = await quizRepository.getQuizById(quizId);
     if (!quiz) {
       throw new Error('Quiz not found');
+    }
+
+    // Check if student has already passed the quiz FIRST
+    const hasPassed = await quizRepository.hasPassedAttempt(quizId, studentId);
+    console.log(`[SERVICE] hasPassed result: ${hasPassed}`);
+    
+    if (hasPassed) {
+      // Student has already passed - return the passed attempt for review
+      console.log(`[SERVICE] Student already passed this quiz, returning passed attempt for review`);
+      const passedAttempt = await quizRepository.getPassedAttempt(quizId, studentId);
+      return passedAttempt;
     }
 
     // Check if there's a pending attempt (not yet submitted)
@@ -17,32 +29,18 @@ class QuizService {
       console.log(`[SERVICE] Found pending attempt #${pendingAttempt.attempt_no}, returning existing attempt`);
       return pendingAttempt;
     }
-
-    // Check if student has already passed the quiz
-    const hasPassed = await quizRepository.hasPassedAttempt(quizId, studentId);
     
     if (hasPassed) {
-      // Student has already passed, check if they can retake (if attempts_allowed is set)
-      // Note: attempts_allowed now limits retakes after passing
-      if (quiz.attempts_allowed) {
-        const passedCount = await quizRepository.getPassedAttemptCount(quizId, studentId);
-        if (passedCount >= quiz.attempts_allowed) {
-          console.log(`[SERVICE] Quiz already passed ${passedCount} times, limit: ${quiz.attempts_allowed}`);
-          throw new Error('Attempt limit exceeded');
-        }
-      }
-      // If no limit or under limit, allow retake
-      const attemptCount = await quizRepository.getAttemptCount(quizId, studentId);
-      const attemptNo = attemptCount + 1;
-      console.log(`[SERVICE] Student already passed, creating retake attempt #${attemptNo}`);
-      return await quizRepository.createAttempt(quizId, studentId, attemptNo);
-    } else {
-      // Student hasn't passed yet, allow unlimited attempts until they pass
-      const attemptCount = await quizRepository.getAttemptCount(quizId, studentId);
-      const attemptNo = attemptCount + 1;
-      console.log(`[SERVICE] Student hasn't passed yet, creating attempt #${attemptNo} (unlimited until pass)`);
-      return await quizRepository.createAttempt(quizId, studentId, attemptNo);
+      // Student has already passed - don't allow retake
+      console.log(`[SERVICE] Student already passed this quiz, no retakes allowed`);
+      throw new Error('Already passed');
     }
+    
+    // Student hasn't passed yet, allow unlimited attempts until they pass
+    const attemptCount = await quizRepository.getAttemptCount(quizId, studentId);
+    const attemptNo = attemptCount + 1;
+    console.log(`[SERVICE] Student hasn't passed yet, creating attempt #${attemptNo} (unlimited until pass)`);
+    return await quizRepository.createAttempt(quizId, studentId, attemptNo);
   }
 
   async submitAttempt(quizId, attemptId, answers) {
@@ -126,6 +124,10 @@ class QuizService {
 
   async getStudentAttempts(quizId, studentId) {
     return await quizRepository.getStudentAttempts(quizId, studentId);
+  }
+
+  async getAttemptAnswers(attemptId) {
+    return await quizRepository.getAttemptAnswers(attemptId);
   }
 }
 

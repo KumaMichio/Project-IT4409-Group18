@@ -14,6 +14,24 @@ import { useCart } from '@/hooks/useCart';
 import { toast } from '@/lib/toast';
 import ReviewForm from '../../../components/review/ReviewForm';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
+
+const getAvatarUrl = (avatarPath: string | null | undefined): string => {
+  if (!avatarPath) return '';
+  
+  // If already a full URL, return as is
+  if (avatarPath.startsWith('http://') || avatarPath.startsWith('https://')) {
+    return avatarPath;
+  }
+  
+  // Remove /api/ from base URL for static files
+  const baseUrl = API_BASE_URL.replace('/api', '');
+  const fullUrl = `${baseUrl}${avatarPath.startsWith('/') ? '' : '/'}${avatarPath}`;
+  
+  // Add timestamp to bust cache
+  return `${fullUrl}?t=${Date.now()}`;
+};
+
 interface Module {
   id: number;
   title: string;
@@ -845,9 +863,10 @@ export default function CourseDetailPage() {
                         <div className="w-16 h-16 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
                           {review.student_avatar ? (
                             <img
-                              src={review.student_avatar}
+                              src={getAvatarUrl(review.student_avatar)}
                               alt={review.student_name}
                               className="w-full h-full rounded-full object-cover"
+                              key={getAvatarUrl(review.student_avatar)}
                             />
                           ) : (
                             <UserOutlined className="text-2xl text-gray-600" />

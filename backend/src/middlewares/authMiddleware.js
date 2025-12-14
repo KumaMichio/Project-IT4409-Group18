@@ -10,16 +10,27 @@ function authMiddleware(req, res, next) {
   const token = authHeader.substring(7);
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('[AUTH] Decoded token:', decoded);
+    
     // Map role từ frontend format về database enum
     let role = decoded.role;
     if (role === 'student') role = 'STUDENT';
     if (role === 'teacher') role = 'INSTRUCTOR';
     if (role === 'admin') role = 'ADMIN';
     
+    // Try multiple possible field names for user ID
+    const userId = decoded.id || decoded.userId || decoded.user_id || decoded.sub;
+    
+    if (!userId) {
+      console.error('[AUTH] No user ID found in token. Decoded:', decoded);
+      return res.status(401).json({ error: 'Invalid token: missing user ID' });
+    }
+    
     req.user = {
-      id: decoded.id || decoded.userId, // Support both formats
+      id: parseInt(userId), // Convert to integer for database
       role: role,
     };
+    console.log('[AUTH] Set req.user:', req.user);
     next();
   } catch (err) {
     console.error('JWT verification failed:', err.message);

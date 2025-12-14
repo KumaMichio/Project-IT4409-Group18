@@ -32,6 +32,7 @@ export default function CoursesPage() {
   const [isLoadingNew, setIsLoadingNew] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchKeyword, setSearchKeyword] = useState(searchParams.get('q') || '');
+  const [selectedTags, setSelectedTags] = useState<string>(searchParams.get('tags') || '');
   const [totalResults, setTotalResults] = useState(0);
   const [filters, setFilters] = useState<FilterState>({
     priceRange: searchParams.get('price_range') || null,
@@ -41,7 +42,7 @@ export default function CoursesPage() {
   });
 
   // Fetch courses function - memoized
-  const fetchCourses = useCallback(async (keyword: string = '', currentFilters: FilterState, isInitialLoad: boolean = false) => {
+  const fetchCourses = useCallback(async (keyword: string = '', tags: string = '', currentFilters: FilterState, isInitialLoad: boolean = false) => {
     // Only show full loading spinner on initial load
     if (isInitialLoad) {
       setInitialLoading(true);
@@ -57,6 +58,11 @@ export default function CoursesPage() {
       
       if (trimmedKeyword) {
         params.q = trimmedKeyword;
+      }
+      
+      // Add tags param
+      if (tags) {
+        params.tags = tags;
       }
       
       // Add filter params
@@ -106,6 +112,7 @@ export default function CoursesPage() {
   // Initial load - when searchParams change
   useEffect(() => {
     const initialKeyword = searchParams.get('q') || '';
+    const initialTags = searchParams.get('tags') || '';
     const initialFilters: FilterState = {
       priceRange: searchParams.get('price_range') || null,
       minRating: searchParams.get('min_rating') || null,
@@ -114,8 +121,9 @@ export default function CoursesPage() {
     };
     
     setSearchKeyword(initialKeyword);
+    setSelectedTags(initialTags);
     setFilters(initialFilters);
-    fetchCourses(initialKeyword, initialFilters, true);
+    fetchCourses(initialKeyword, initialTags, initialFilters, true);
   }, [searchParams, fetchCourses]);
 
   // Handle filter change with smooth transition
@@ -124,7 +132,7 @@ export default function CoursesPage() {
     
     // Use startTransition for smooth updates
     startTransition(() => {
-      fetchCourses(searchKeyword, newFilters, false);
+      fetchCourses(searchKeyword, selectedTags, newFilters, false);
     });
   };
 
@@ -141,10 +149,15 @@ export default function CoursesPage() {
       <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {searchKeyword ? `Kết quả tìm kiếm: "${searchKeyword}"` : 'Tất cả khóa học'}
+            {selectedTags 
+              ? `Khóa học ${selectedTags}` 
+              : searchKeyword 
+                ? `Kết quả tìm kiếm: "${searchKeyword}"` 
+                : 'Tất cả khóa học'
+            }
           </h1>
           <p className="text-gray-600">
-            {searchKeyword 
+            {searchKeyword || selectedTags
               ? `Tìm thấy ${totalResults} khóa học`
               : 'Khám phá các khóa học được cung cấp bởi các giảng viên chuyên nghiệp'
             }
@@ -184,7 +197,7 @@ export default function CoursesPage() {
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 max-w-md mx-auto">
                   <p className="text-gray-700 font-semibold mb-2">Không tìm thấy khóa học</p>
                   <p className="text-gray-600 text-sm">
-                    {searchKeyword || filters.priceRange || filters.minRating || filters.sortBy
+                    {searchKeyword || selectedTags || filters.priceRange || filters.minRating || filters.sortBy
                       ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm của bạn.'
                       : 'Chưa có khóa học nào trong hệ thống.'}
                   </p>

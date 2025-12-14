@@ -41,9 +41,14 @@ const {
   // Student management
   getStudentsByCourse,
   getAllStudents,
+  // Tags
+  getTags,
 } = require('../controllers/course.controller');
 
 // Public routes
+// GET /api/courses/tags - Get all tags
+router.get('/tags', getTags);
+
 // GET /api/courses - Get all published courses (for listing page)
 router.get('/', getAllCourses);
 
