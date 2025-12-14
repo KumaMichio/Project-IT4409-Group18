@@ -5,6 +5,7 @@ class LessonService {
   async updateLessonProgress(lessonId, studentId, watchedSeconds) {
     // Get lesson info
     const lesson = await lessonRepository.getLessonById(lessonId);
+    
     if (!lesson) {
       throw {
         status: 404,

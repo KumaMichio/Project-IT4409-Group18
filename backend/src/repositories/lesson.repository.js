@@ -23,7 +23,7 @@ class LessonRepository {
       `INSERT INTO student_lesson_progress 
        (student_id, lesson_id, watched_s, is_completed, last_seen_at)
        VALUES ($1, $2, $3, $4, NOW())`,
-      [studentId, lessonId, watchedSeconds, isCompleted]
+      [studentId, lessonId, Math.floor(watchedSeconds), isCompleted]
     );
   }
 
@@ -32,7 +32,7 @@ class LessonRepository {
       `UPDATE student_lesson_progress 
        SET watched_s = $3, is_completed = $4, last_seen_at = NOW()
        WHERE student_id = $1 AND lesson_id = $2`,
-      [studentId, lessonId, watchedSeconds, isCompleted]
+      [studentId, lessonId, Math.floor(watchedSeconds), isCompleted]
     );
   }
 
