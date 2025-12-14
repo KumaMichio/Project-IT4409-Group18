@@ -28,6 +28,8 @@ function createExpressApp() {
   const paymentRoutes = require('./routes/payment.routes');
   const enrollmentRoutes = require('./routes/enrollment.routes');
   const chatRoutes = require('./routes/chat.route');
+  const reviewRoutes = require('./routes/review.routes');
+  const profileRoutes = require('./routes/profile.routes');
 
   // Mount existing routes
   app.use('/api/courses', courseRoutes);
@@ -43,6 +45,8 @@ function createExpressApp() {
   app.use('/api/cart', cartRoutes);
   app.use('/api/payments', paymentRoutes);
   app.use('/api/enrollments', enrollmentRoutes);
+  app.use('/api/reviews', reviewRoutes);
+  app.use('/api/profile', profileRoutes);
   
   // Debug middleware for chat routes
   app.use('/api/chat', (req, res, next) => {
