@@ -11,6 +11,7 @@ import {
   DownOutlined,
 } from '@ant-design/icons';
 import { Module, Lesson } from './types';
+import { API_URL } from '../../config/api';
 
 type LessonSidebarProps = {
   modules: Module[];
@@ -97,7 +98,7 @@ export function LessonSidebar({
                           <div key={asset.id}>
                             {asset.asset_kind === 'PDF' && (
                               <a
-                                href={asset.url}
+                                href={asset.url.startsWith('/uploads/') ? `${API_URL}${asset.url}` : asset.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}

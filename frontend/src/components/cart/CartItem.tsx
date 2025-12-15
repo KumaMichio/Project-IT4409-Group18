@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { DeleteOutlined } from '@ant-design/icons';
 import { CartItem as CartItemType } from '@/hooks/useCart';
+import { normalizeImageUrl } from '@/utils/imageUrl';
 
 interface CartItemProps {
   item: CartItemType;
@@ -31,11 +32,12 @@ export function CartItem({ item, onRemove, isRemoving = false }: CartItemProps) 
       >
         {item.thumbnail_url ? (
           <Image
-            src={item.thumbnail_url}
+            src={normalizeImageUrl(item.thumbnail_url)}
             alt={item.title}
             fill
             className="object-cover rounded"
             sizes="64px"
+            unoptimized
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">

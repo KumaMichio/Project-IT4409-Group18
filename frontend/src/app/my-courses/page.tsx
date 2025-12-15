@@ -8,6 +8,7 @@ import { Header } from '@/components/layout/Header';
 import { useAuth } from '@/hooks/useAuth';
 import apiClient from '@/lib/apiClient';
 import { LoadingOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import { normalizeImageUrl } from '@/utils/imageUrl';
 
 interface EnrolledCourse {
   enrollment_id: number;
@@ -160,17 +161,18 @@ export default function MyCoursesPage() {
             {enrollments.map((enrollment) => (
               <div
                 key={enrollment.enrollment_id}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow group"
+                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow group flex flex-col h-full"
               >
                 <Link href={`/courses/${enrollment.course.id}`}>
                   <div className="relative h-48 bg-gray-200">
                     {enrollment.course.thumbnail_url ? (
                       <Image
-                        src={enrollment.course.thumbnail_url}
+                        src={normalizeImageUrl(enrollment.course.thumbnail_url)}
                         alt={enrollment.course.title}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-300"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        unoptimized
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -187,9 +189,9 @@ export default function MyCoursesPage() {
                   </div>
                 </Link>
 
-                <div className="p-4">
+                <div className="p-4 flex flex-col flex-grow">
                   <Link href={`/courses/${enrollment.course.id}`}>
-                    <h3 className="font-semibold text-lg mb-2 line-clamp-2 hover:text-blue-600 transition">
+                    <h3 className="font-semibold text-lg mb-2 line-clamp-2 hover:text-blue-600 transition min-h-[3.5rem]">
                       {enrollment.course.title}
                     </h3>
                   </Link>
@@ -229,13 +231,15 @@ export default function MyCoursesPage() {
                     Đăng ký: {formatDate(enrollment.enrolled_at)}
                   </p>
 
-                  {/* Continue learning button */}
-                  <Link href={`/courses/${enrollment.course.id}`}>
-                    <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2">
-                      <PlayCircleOutlined />
-                      Tiếp tục học
-                    </button>
-                  </Link>
+                  {/* Continue learning button - pushed to bottom */}
+                  <div className="mt-auto">
+                    <Link href={`/courses/${enrollment.course.id}`}>
+                      <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2">
+                        <PlayCircleOutlined />
+                        Tiếp tục học
+                      </button>
+                    </Link>
+                  </div>
                 </div>
               </div>
             ))}

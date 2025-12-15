@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/apiClient';
 import Modal from '@/components/common/Modal';
 import { API_URL } from '@/config/api';
+import { getToken } from '@/lib/auth';
 
 interface Module {
   id?: number;
@@ -64,6 +65,8 @@ export default function NewCoursePage() {
     price_cents: 0,
     currency: 'VND',
     thumbnail_url: '',
+    thumbnail_uploadType: 'url' as 'url' | 'file',
+    thumbnail_file: null as File | null,
     lang: 'vi',
   });
 
@@ -106,8 +109,59 @@ export default function NewCoursePage() {
 
     try {
       setLoading(true);
+      
+      // Step 0: Upload thumbnail if file is selected
+      let thumbnailUrl = formData.thumbnail_url;
+      if (formData.thumbnail_uploadType === 'file' && formData.thumbnail_file) {
+        const thumbnailFormData = new FormData();
+        thumbnailFormData.append('thumbnail', formData.thumbnail_file);
+        
+        const token = getToken();
+        if (!token) {
+          alert('Vui lòng đăng nhập lại');
+          return;
+        }
+        
+        const thumbnailResponse = await fetch(`${API_URL}/api/courses/instructor/my-courses/upload-thumbnail`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: thumbnailFormData,
+        });
+        
+        if (!thumbnailResponse.ok) {
+          let errorMessage = 'Upload thumbnail failed';
+          try {
+            const contentType = thumbnailResponse.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              const error = await thumbnailResponse.json();
+              errorMessage = error.error || error.message || 'Upload thumbnail failed';
+            } else {
+              errorMessage = `Server error: ${thumbnailResponse.status} ${thumbnailResponse.statusText}`;
+            }
+          } catch (e) {
+            errorMessage = `Server error: ${thumbnailResponse.status} ${thumbnailResponse.statusText}`;
+          }
+          throw new Error(errorMessage);
+        }
+        
+        const thumbnailResult = await thumbnailResponse.json();
+        thumbnailUrl = thumbnailResult.url;
+      }
+      
+      if (!thumbnailUrl) {
+        alert('Vui lòng thêm hình ảnh đại diện cho khóa học');
+        setLoading(false);
+        return;
+      }
+      
       // Step 1: Create course
-      const response = await apiClient.post('/courses/instructor/my-courses', formData);
+      const courseData = {
+        ...formData,
+        thumbnail_url: thumbnailUrl,
+      };
+      const response = await apiClient.post('/courses/instructor/my-courses', courseData);
       const courseId = response.data.id;
 
       // Step 2: Add modules, lessons, videos, quizzes
@@ -141,7 +195,7 @@ export default function NewCoursePage() {
               formData.append('video', asset.file);
               formData.append('position', asset.position.toString());
               
-              const token = localStorage.getItem('token');
+              const token = getToken();
               await fetch(`${API_URL}/api/courses/instructor/lessons/${lessonId}/assets/upload`, {
                 method: 'POST',
                 headers: {
@@ -532,15 +586,79 @@ export default function NewCoursePage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              URL hình ảnh đại diện
+              Hình ảnh đại diện
             </label>
-            <input
-              type="url"
-              value={formData.thumbnail_url}
-              onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="https://example.com/image.jpg"
-            />
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Cách thêm hình ảnh
+              </label>
+              <div className="flex space-x-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="file"
+                    checked={formData.thumbnail_uploadType === 'file'}
+                    onChange={(e) => setFormData({ ...formData, thumbnail_uploadType: 'file' as 'url' | 'file', thumbnail_url: '' })}
+                    className="mr-2"
+                  />
+                  Upload từ máy tính
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="url"
+                    checked={formData.thumbnail_uploadType === 'url'}
+                    onChange={(e) => setFormData({ ...formData, thumbnail_uploadType: 'url' as 'url' | 'file', thumbnail_file: null })}
+                    className="mr-2"
+                  />
+                  URL từ Drive/Dropbox
+                </label>
+              </div>
+            </div>
+            
+            {formData.thumbnail_uploadType === 'file' ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Chọn file ảnh * (.jpg, .png, .gif, .webp)
+                </label>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                  onChange={(e) => setFormData({ ...formData, thumbnail_file: e.target.files?.[0] || null })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+                {formData.thumbnail_file && (
+                  <p className="mt-2 text-sm text-gray-600">
+                    Đã chọn: {formData.thumbnail_file.name} ({(formData.thumbnail_file.size / 1024 / 1024).toFixed(2)} MB)
+                  </p>
+                )}
+                {formData.thumbnail_file && (
+                  <div className="mt-2">
+                    <img 
+                      src={URL.createObjectURL(formData.thumbnail_file)} 
+                      alt="Preview" 
+                      className="max-w-xs max-h-48 object-cover rounded"
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  URL hình ảnh *
+                </label>
+                <input
+                  type="url"
+                  value={formData.thumbnail_url}
+                  onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="https://drive.google.com/... hoặc https://dropbox.com/..."
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Nhập URL từ Google Drive, Dropbox, hoặc link trực tiếp
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">

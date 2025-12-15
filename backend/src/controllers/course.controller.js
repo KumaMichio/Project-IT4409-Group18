@@ -1,4 +1,5 @@
 const courseService = require('../services/course.service');
+const fs = require('fs');
 
 // Get course details with modules and lessons
 const getCourseContent = async (req, res) => {
@@ -404,9 +405,20 @@ const uploadVideoAsset = async (req, res) => {
     // Tạo URL để truy cập video từ frontend
     const videoUrl = `/uploads/videos/${req.file.filename}`;
     
+    // Lưu metadata vào meta JSONB
+    const meta = {
+      original_filename: req.file.originalname,
+      file_size: req.file.size,
+      mime_type: req.file.mimetype,
+      uploaded_at: new Date().toISOString(),
+      storage_path: req.file.path, // Đường dẫn đầy đủ trên server
+      filename: req.file.filename, // Tên file đã được lưu
+    };
+    
     const assetData = {
       asset_kind: 'VIDEO',
       url: videoUrl,
+      meta: meta,
       position: parseInt(req.body.position) || 1,
     };
     
@@ -414,6 +426,111 @@ const uploadVideoAsset = async (req, res) => {
     res.status(201).json(asset);
   } catch (error) {
     console.error('Error uploading video asset:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+};
+
+const uploadPDFAsset = async (req, res) => {
+  const { lessonId } = req.params;
+  const instructorId = req.user.id;
+  
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No PDF file uploaded' });
+    }
+    
+    // Tạo URL để truy cập PDF từ frontend
+    const pdfUrl = `/uploads/documents/${req.file.filename}`;
+    
+    // Lưu metadata vào meta JSONB
+    const meta = {
+      original_filename: req.file.originalname,
+      file_size: req.file.size,
+      mime_type: req.file.mimetype,
+      uploaded_at: new Date().toISOString(),
+      storage_path: req.file.path, // Đường dẫn đầy đủ trên server
+      filename: req.file.filename, // Tên file đã được lưu
+    };
+    
+    const assetData = {
+      asset_kind: 'PDF',
+      url: pdfUrl,
+      meta: meta,
+      position: parseInt(req.body.position) || 1,
+    };
+    
+    const asset = await courseService.createAsset(lessonId, instructorId, assetData);
+    res.status(201).json(asset);
+  } catch (error) {
+    console.error('Error uploading PDF asset:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+};
+
+const uploadThumbnail = async (req, res) => {
+  const instructorId = req.user.id;
+  
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No thumbnail file uploaded' });
+    }
+    
+    // Verify file exists on disk
+    if (!fs.existsSync(req.file.path)) {
+      console.error('File was not saved to disk:', req.file.path);
+      return res.status(500).json({ error: 'File upload failed - file not saved to disk' });
+    }
+    
+    // Verify file size matches
+    const stats = fs.statSync(req.file.path);
+    if (stats.size !== req.file.size) {
+      console.error('File size mismatch:', {
+        expected: req.file.size,
+        actual: stats.size,
+        path: req.file.path
+      });
+      return res.status(500).json({ error: 'File upload failed - size mismatch' });
+    }
+    
+    // Tạo URL để truy cập thumbnail từ frontend
+    const thumbnailUrl = `/uploads/thumbnails/${req.file.filename}`;
+    
+    // Log để debug
+    console.log('Thumbnail uploaded successfully:', {
+      filename: req.file.filename,
+      path: req.file.path,
+      url: thumbnailUrl,
+      size: req.file.size,
+      mimeType: req.file.mimetype,
+      originalName: req.file.originalname,
+      instructorId: instructorId
+    });
+    
+    // Lưu metadata vào response
+    const meta = {
+      original_filename: req.file.originalname,
+      file_size: req.file.size,
+      mime_type: req.file.mimetype,
+      uploaded_at: new Date().toISOString(),
+      storage_path: req.file.path,
+      filename: req.file.filename,
+    };
+    
+    res.status(201).json({
+      url: thumbnailUrl,
+      meta: meta
+    });
+  } catch (error) {
+    console.error('Error uploading thumbnail:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      file: req.file ? {
+        filename: req.file.filename,
+        path: req.file.path,
+        size: req.file.size
+      } : null
+    });
     res.status(500).json({ error: error.message || 'Server error' });
   }
 };
@@ -597,6 +714,8 @@ module.exports = {
   getAssets,
   createAsset,
   uploadVideoAsset,
+  uploadPDFAsset,
+  uploadThumbnail,
   updateAsset,
   deleteAsset,
   // Quiz management

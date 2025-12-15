@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import apiClient from '@/lib/apiClient';
 import Modal from '@/components/common/Modal';
 import { API_URL } from '@/config/api';
+import { getToken } from '@/lib/auth';
+import { normalizeImageUrl } from '@/utils/imageUrl';
 
 interface Module {
   id: number;
@@ -63,6 +65,8 @@ export default function CourseDetailPage() {
     price_cents: 0,
     currency: 'VND',
     thumbnail_url: '',
+    thumbnail_uploadType: 'url' as 'url' | 'file',
+    thumbnail_file: null as File | null,
     is_published: false,
   });
 
@@ -71,12 +75,19 @@ export default function CourseDetailPage() {
   const [lessonModal, setLessonModal] = useState({ isOpen: false, moduleId: 0, editing: null as Lesson | null });
   const [videoModal, setVideoModal] = useState({ isOpen: false, lessonId: 0, editing: null as Asset | null });
   const [quizModal, setQuizModal] = useState({ isOpen: false, lessonId: 0, editing: null as Quiz | null });
+  const [documentModal, setDocumentModal] = useState({ isOpen: false, lessonId: 0, editing: null as Asset | null });
   
   // Form states
   const [moduleForm, setModuleForm] = useState({ title: '' });
   const [lessonForm, setLessonForm] = useState({ title: '', duration_s: '' });
   const [videoForm, setVideoForm] = useState({ url: '', uploadType: 'url' as 'url' | 'file', file: null as File | null });
   const [quizForm, setQuizForm] = useState({ title: '', pass_score: 60, time_limit_s: '', attempts_allowed: '' });
+  const [documentForm, setDocumentForm] = useState({ 
+    asset_kind: 'PDF' as 'PDF' | 'LINK', 
+    url: '', 
+    uploadType: 'url' as 'url' | 'file', 
+    file: null as File | null 
+  });
 
   useEffect(() => {
     fetchCourse();
@@ -93,6 +104,8 @@ export default function CourseDetailPage() {
         price_cents: response.data.price_cents,
         currency: response.data.currency,
         thumbnail_url: response.data.thumbnail_url || '',
+        thumbnail_uploadType: 'url',
+        thumbnail_file: null,
         is_published: response.data.is_published,
       });
     } catch (err: any) {
@@ -105,11 +118,58 @@ export default function CourseDetailPage() {
 
   const handleUpdateCourse = async () => {
     try {
-      await apiClient.put(`/courses/instructor/my-courses/${courseId}`, formData);
+      // Upload thumbnail if file is selected
+      let thumbnailUrl = formData.thumbnail_url;
+      if (formData.thumbnail_uploadType === 'file' && formData.thumbnail_file) {
+        const thumbnailFormData = new FormData();
+        thumbnailFormData.append('thumbnail', formData.thumbnail_file);
+        
+        const token = getToken();
+        if (!token) {
+          alert('Vui lòng đăng nhập lại');
+          router.push('/auth/login');
+          return;
+        }
+        
+        const thumbnailResponse = await fetch(`${API_URL}/api/courses/instructor/my-courses/upload-thumbnail`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: thumbnailFormData,
+        });
+        
+        if (!thumbnailResponse.ok) {
+          let errorMessage = 'Upload thumbnail failed';
+          try {
+            const contentType = thumbnailResponse.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              const error = await thumbnailResponse.json();
+              errorMessage = error.error || error.message || 'Upload thumbnail failed';
+            } else {
+              errorMessage = `Server error: ${thumbnailResponse.status} ${thumbnailResponse.statusText}`;
+            }
+          } catch (e) {
+            errorMessage = `Server error: ${thumbnailResponse.status} ${thumbnailResponse.statusText}`;
+          }
+          throw new Error(errorMessage);
+        }
+        
+        const thumbnailResult = await thumbnailResponse.json();
+        thumbnailUrl = thumbnailResult.url;
+      }
+      
+      // Update course with thumbnail URL
+      const courseData = {
+        ...formData,
+        thumbnail_url: thumbnailUrl,
+      };
+      
+      await apiClient.put(`/courses/instructor/my-courses/${courseId}`, courseData);
       alert('Cập nhật thành công!');
       fetchCourse();
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Không thể cập nhật');
+      alert(err instanceof Error ? err.message : (err.response?.data?.error || 'Không thể cập nhật'));
     }
   };
 
@@ -206,7 +266,13 @@ export default function CourseDetailPage() {
           formData.append('video', videoForm.file);
           formData.append('position', '1');
           
-          const token = localStorage.getItem('token');
+          const token = getToken();
+          if (!token) {
+            alert('Vui lòng đăng nhập lại');
+            router.push('/auth/login');
+            return;
+          }
+          
           const response = await fetch(`${API_URL}/api/courses/instructor/lessons/${videoModal.lessonId}/assets/upload`, {
             method: 'POST',
             headers: {
@@ -291,6 +357,117 @@ export default function CourseDetailPage() {
     }
   };
 
+  // Document handlers
+  const openDocumentModal = (lessonId: number, asset?: Asset) => {
+    setDocumentForm({ 
+      asset_kind: asset?.asset_kind === 'LINK' ? 'LINK' : 'PDF', 
+      url: asset?.url || '',
+      uploadType: 'url',
+      file: null
+    });
+    setDocumentModal({ isOpen: true, lessonId, editing: asset || null });
+  };
+
+  const handleSaveDocument = async () => {
+    try {
+      // Validate
+      if (documentForm.uploadType === 'file') {
+        if (!documentForm.file) {
+          alert('Vui lòng chọn file PDF');
+          return;
+        }
+      } else {
+        if (!documentForm.url.trim()) {
+          alert('Vui lòng nhập URL tài liệu');
+          return;
+        }
+      }
+
+      if (documentModal.editing) {
+        // Update existing asset
+        await apiClient.put(`/courses/instructor/assets/${documentModal.editing.id}`, {
+          url: documentForm.url,
+        });
+      } else {
+        // Create new asset - always PDF
+        if (documentForm.uploadType === 'file' && documentForm.file) {
+          // Upload PDF file
+          const formData = new FormData();
+          formData.append('document', documentForm.file);
+          formData.append('position', '1');
+          
+          const token = getToken();
+          if (!token) {
+            alert('Vui lòng đăng nhập lại');
+            router.push('/auth/login');
+            return;
+          }
+          
+          const response = await fetch(`${API_URL}/api/courses/instructor/lessons/${documentModal.lessonId}/assets/upload-pdf`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+            body: formData,
+          });
+          
+          if (!response.ok) {
+            let errorMessage = 'Upload failed';
+            try {
+              const contentType = response.headers.get('content-type');
+              if (contentType && contentType.includes('application/json')) {
+                const error = await response.json();
+                errorMessage = error.error || error.message || 'Upload failed';
+              } else {
+                const text = await response.text();
+                errorMessage = `Server error: ${response.status} ${response.statusText}`;
+                console.error('Non-JSON error response:', text);
+              }
+            } catch (e) {
+              errorMessage = `Server error: ${response.status} ${response.statusText}`;
+            }
+            throw new Error(errorMessage);
+          }
+          
+          // Parse response if successful
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const result = await response.json();
+            console.log('Upload PDF successful:', result);
+          }
+        } else {
+          // Add URL - default to PDF
+          const module = course?.modules.find(m => 
+            m.lessons.some(l => l.id === documentModal.lessonId)
+          );
+          const lesson = module?.lessons.find(l => l.id === documentModal.lessonId);
+          const position = (lesson?.assets.length || 0) + 1;
+          
+          await apiClient.post(`/courses/instructor/lessons/${documentModal.lessonId}/assets`, {
+            asset_kind: 'PDF',
+            url: documentForm.url,
+            position,
+          });
+        }
+      }
+      setDocumentModal({ isOpen: false, lessonId: 0, editing: null });
+      setDocumentForm({ asset_kind: 'PDF', url: '', uploadType: 'url', file: null });
+      await fetchCourse();
+    } catch (err: any) {
+      alert(err instanceof Error ? err.message : (err.response?.data?.error || 'Không thể lưu tài liệu'));
+    }
+  };
+
+  const handleDeleteDocument = async (assetId: number) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa tài liệu này?')) return;
+    try {
+      await apiClient.delete(`/courses/instructor/assets/${assetId}`);
+      fetchCourse();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Không thể xóa tài liệu');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -370,14 +547,98 @@ export default function CourseDetailPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                URL hình ảnh
+                Hình ảnh đại diện
               </label>
-              <input
-                type="url"
-                value={formData.thumbnail_url}
-                onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              />
+              <div className="mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cách thêm hình ảnh
+                </label>
+                <div className="flex space-x-4">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="file"
+                      checked={formData.thumbnail_uploadType === 'file'}
+                      onChange={(e) => setFormData({ ...formData, thumbnail_uploadType: 'file' as 'url' | 'file', thumbnail_url: '' })}
+                      className="mr-2"
+                    />
+                    Upload từ máy tính
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="url"
+                      checked={formData.thumbnail_uploadType === 'url'}
+                      onChange={(e) => setFormData({ ...formData, thumbnail_uploadType: 'url' as 'url' | 'file', thumbnail_file: null })}
+                      className="mr-2"
+                    />
+                    URL từ Drive/Dropbox
+                  </label>
+                </div>
+              </div>
+              
+              {formData.thumbnail_uploadType === 'file' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Chọn file ảnh * (.jpg, .png, .gif, .webp)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                    onChange={(e) => setFormData({ ...formData, thumbnail_file: e.target.files?.[0] || null })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  />
+                  {formData.thumbnail_file && (
+                    <p className="mt-2 text-sm text-gray-600">
+                      Đã chọn: {formData.thumbnail_file.name} ({(formData.thumbnail_file.size / 1024 / 1024).toFixed(2)} MB)
+                    </p>
+                  )}
+                  {formData.thumbnail_file && (
+                    <div className="mt-2">
+                      <img 
+                        src={URL.createObjectURL(formData.thumbnail_file)} 
+                        alt="Preview" 
+                        className="max-w-xs max-h-48 object-cover rounded"
+                      />
+                    </div>
+                  )}
+                  {formData.thumbnail_url && !formData.thumbnail_file && (
+                    <div className="mt-2">
+                      <p className="text-xs text-gray-500 mb-1">Hình ảnh hiện tại:</p>
+                      <img 
+                        src={normalizeImageUrl(formData.thumbnail_url)} 
+                        alt="Current thumbnail" 
+                        className="max-w-xs max-h-48 object-cover rounded"
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    URL hình ảnh
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.thumbnail_url}
+                    onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    placeholder="https://drive.google.com/... hoặc https://dropbox.com/..."
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Nhập URL từ Google Drive, Dropbox, hoặc link trực tiếp
+                  </p>
+                  {formData.thumbnail_url && (
+                    <div className="mt-2">
+                      <img 
+                        src={normalizeImageUrl(formData.thumbnail_url)} 
+                        alt="Current thumbnail" 
+                        className="max-w-xs max-h-48 object-cover rounded"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -488,24 +749,45 @@ export default function CourseDetailPage() {
                               >
                                 {lesson.quiz ? 'Sửa Quiz' : '+ Quiz'}
                               </button>
+                              <button
+                                onClick={() => openDocumentModal(lesson.id)}
+                                className="px-2 py-1 bg-orange-50 text-orange-700 rounded text-xs hover:bg-orange-100"
+                              >
+                                + Tài liệu
+                              </button>
                             </div>
                           </div>
                           
                           {lesson.assets.length > 0 && (
                             <div className="mt-2 space-y-1">
-                              {lesson.assets.map((asset) => (
-                                <div key={asset.id} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded">
-                                  <span className="text-gray-700">
-                                    {asset.asset_kind === 'VIDEO' && '🎥'} {asset.url}
-                                  </span>
-                                  <button
-                                    onClick={() => handleDeleteVideo(asset.id)}
-                                    className="text-red-600 hover:text-red-700 text-xs"
-                                  >
-                                    Xóa
-                                  </button>
-                                </div>
-                              ))}
+                              {lesson.assets.map((asset) => {
+                                const getIcon = () => {
+                                  if (asset.asset_kind === 'VIDEO') return '🎥';
+                                  if (asset.asset_kind === 'PDF') return '📄';
+                                  if (asset.asset_kind === 'LINK') return '🔗';
+                                  return '';
+                                };
+                                const handleDelete = () => {
+                                  if (asset.asset_kind === 'VIDEO') {
+                                    handleDeleteVideo(asset.id);
+                                  } else {
+                                    handleDeleteDocument(asset.id);
+                                  }
+                                };
+                                return (
+                                  <div key={asset.id} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded">
+                                    <span className="text-gray-700">
+                                      {getIcon()} {asset.url}
+                                    </span>
+                                    <button
+                                      onClick={handleDelete}
+                                      className="text-red-600 hover:text-red-700 text-xs"
+                                    >
+                                      Xóa
+                                    </button>
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                           
@@ -771,6 +1053,107 @@ export default function CourseDetailPage() {
             <button
               onClick={handleSaveQuiz}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Lưu
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Document Modal */}
+      <Modal
+        isOpen={documentModal.isOpen}
+        onClose={() => {
+          setDocumentModal({ isOpen: false, lessonId: 0, editing: null });
+          setDocumentForm({ asset_kind: 'PDF', url: '', uploadType: 'url', file: null });
+        }}
+        title={documentModal.editing ? 'Sửa tài liệu' : 'Thêm tài liệu mới'}
+        size="lg"
+      >
+        <div className="space-y-4">
+          {!documentModal.editing && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Cách thêm tài liệu
+              </label>
+              <div className="flex space-x-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="file"
+                    checked={documentForm.uploadType === 'file'}
+                    onChange={(e) => setDocumentForm({ ...documentForm, uploadType: 'file' as 'url' | 'file', url: '' })}
+                    className="mr-2"
+                  />
+                  Upload từ máy tính
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="url"
+                    checked={documentForm.uploadType === 'url'}
+                    onChange={(e) => setDocumentForm({ ...documentForm, uploadType: 'url' as 'url' | 'file', file: null })}
+                    className="mr-2"
+                  />
+                  URL từ Drive/Dropbox
+                </label>
+              </div>
+            </div>
+          )}
+
+          {documentForm.uploadType === 'file' && !documentModal.editing ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Chọn file PDF * (.pdf)
+              </label>
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => setDocumentForm({ ...documentForm, file: e.target.files?.[0] || null })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              />
+              {documentForm.file && (
+                <p className="mt-2 text-sm text-gray-600">
+                  Đã chọn: {documentForm.file.name} ({(documentForm.file.size / 1024 / 1024).toFixed(2)} MB)
+                </p>
+              )}
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                URL tài liệu *
+              </label>
+              <input
+                type="url"
+                value={documentForm.url}
+                onChange={(e) => setDocumentForm({ ...documentForm, url: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                placeholder="https://drive.google.com/... hoặc https://dropbox.com/..."
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Nhập URL từ Google Drive, Dropbox, hoặc link trực tiếp
+              </p>
+            </div>
+          )}
+
+          <div className="flex justify-end space-x-2">
+            <button
+              onClick={() => {
+                setDocumentModal({ isOpen: false, lessonId: 0, editing: null });
+                setDocumentForm({ asset_kind: 'PDF', url: '', uploadType: 'url', file: null });
+              }}
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Hủy
+            </button>
+            <button
+              onClick={handleSaveDocument}
+              disabled={
+                documentForm.asset_kind === 'PDF' && documentForm.uploadType === 'file'
+                  ? !documentForm.file
+                  : !documentForm.url.trim()
+              }
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
             >
               Lưu
             </button>

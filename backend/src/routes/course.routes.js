@@ -1,9 +1,10 @@
 const express = require('express');
+const multer = require('multer');
 const router = express.Router();
 const { authMiddleware } = require('../middlewares/authMiddleware');
 const { authRequired } = require('../middlewares/auth.middleware');
 const { checkRole } = require('../middlewares/role.middleware');
-const { uploadVideo } = require('../middlewares/upload.middleware');
+const { uploadVideo, uploadPDF, uploadThumbnail } = require('../middlewares/upload.middleware');
 const {
   getCourseContent,
   getCourseProgress,
@@ -30,6 +31,8 @@ const {
   getAssets,
   createAsset,
   uploadVideoAsset,
+  uploadPDFAsset,
+  uploadThumbnail: uploadThumbnailController,
   updateAsset,
   deleteAsset,
   // Quiz management
@@ -74,6 +77,23 @@ instructorRoutes.use(checkRole('INSTRUCTOR'));
 instructorRoutes.get('/my-courses', getInstructorCourses);
 instructorRoutes.get('/my-courses/:courseId', getCourseForInstructor);
 instructorRoutes.post('/my-courses', createCourse);
+// Error handling wrapper for thumbnail upload
+const handleThumbnailUpload = (req, res, next) => {
+  uploadThumbnail(req, res, (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ error: 'File quá lớn. Kích thước tối đa là 10MB' });
+        }
+        return res.status(400).json({ error: err.message });
+      }
+      return res.status(400).json({ error: err.message || 'Lỗi upload file' });
+    }
+    next();
+  });
+};
+
+instructorRoutes.post('/my-courses/upload-thumbnail', handleThumbnailUpload, uploadThumbnailController);
 instructorRoutes.put('/my-courses/:courseId', updateCourse);
 instructorRoutes.delete('/my-courses/:courseId', deleteCourse);
 
@@ -89,10 +109,29 @@ instructorRoutes.post('/modules/:moduleId/lessons', createLesson);
 instructorRoutes.put('/lessons/:lessonId', updateLesson);
 instructorRoutes.delete('/lessons/:lessonId', deleteLesson);
 
-// Asset (Video) management
+// Asset (Video, PDF, Link) management
 instructorRoutes.get('/lessons/:lessonId/assets', getAssets);
 instructorRoutes.post('/lessons/:lessonId/assets', createAsset);
 instructorRoutes.post('/lessons/:lessonId/assets/upload', uploadVideo, uploadVideoAsset);
+// Error handling wrapper for PDF upload
+const handlePDFUpload = (req, res, next) => {
+  uploadPDF(req, res, (err) => {
+    if (err) {
+      // Handle multer errors
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ error: 'File quá lớn. Kích thước tối đa là 50MB' });
+        }
+        return res.status(400).json({ error: err.message });
+      }
+      // Handle other errors (e.g., file filter errors)
+      return res.status(400).json({ error: err.message || 'Lỗi upload file' });
+    }
+    next();
+  });
+};
+
+instructorRoutes.post('/lessons/:lessonId/assets/upload-pdf', handlePDFUpload, uploadPDFAsset);
 instructorRoutes.put('/assets/:assetId', updateAsset);
 instructorRoutes.delete('/assets/:assetId', deleteAsset);
 

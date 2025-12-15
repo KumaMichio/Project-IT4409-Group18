@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/hooks/useCart';
 import { toast } from '@/lib/toast';
 import ReviewForm from '../../../components/review/ReviewForm';
+import { normalizeImageUrl } from '@/utils/imageUrl';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -456,7 +457,7 @@ export default function CourseDetailPage() {
           <div className="bg-white rounded-lg shadow-xl overflow-hidden max-w-[340px] ml-auto">
             <div className="relative">
               <img
-                src={course.thumbnail_url || '/placeholder-course.jpg'}
+                src={normalizeImageUrl(course.thumbnail_url)}
                 alt={course.title}
                 className="w-full h-48 object-cover"
               />
@@ -733,7 +734,7 @@ export default function CourseDetailPage() {
                     onClick={() => router.push(`/courses/${relatedCourse.id}`)}
                   >
                     <img
-                      src={relatedCourse.thumbnail_url || '/placeholder-course.jpg'}
+                      src={normalizeImageUrl(relatedCourse.thumbnail_url)}
                       alt={relatedCourse.title}
                       className="w-full h-48 object-cover"
                     />

@@ -209,7 +209,7 @@ export function VideoPlayer({ lesson, onProgress, onComplete, resumeSeconds = 0 
             <div key={asset.id} className="mb-2">
               {asset.asset_kind === 'PDF' && (
                 <a
-                  href={asset.url}
+                  href={asset.url.startsWith('/uploads/') ? `${API_URL}${asset.url}` : asset.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-400 hover:underline"

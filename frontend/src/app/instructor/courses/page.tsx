@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/apiClient';
+import { normalizeImageUrl } from '@/utils/imageUrl';
 
 interface Course {
   id: number;
@@ -114,7 +115,7 @@ export default function InstructorCoursesPage() {
             >
               {course.thumbnail_url && (
                 <img
-                  src={course.thumbnail_url}
+                  src={normalizeImageUrl(course.thumbnail_url)}
                   alt={course.title}
                   className="w-full h-48 object-cover"
                 />

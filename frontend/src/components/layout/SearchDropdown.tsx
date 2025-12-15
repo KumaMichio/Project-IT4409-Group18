@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import apiClient from '@/lib/apiClient';
 import { SearchOutlined } from '@ant-design/icons';
+import { normalizeImageUrl } from '@/utils/imageUrl';
 
 interface Course {
   id: number;
@@ -147,7 +148,7 @@ export function SearchDropdown({ keyword, isOpen, onClose, onSelectCourse }: Sea
                     <div className="relative w-16 h-10 bg-gray-200 rounded flex-shrink-0 overflow-hidden">
                       {course.thumbnail_url ? (
                         <img
-                          src={course.thumbnail_url}
+                          src={normalizeImageUrl(course.thumbnail_url)}
                           alt={course.title}
                           className="w-full h-full object-cover rounded"
                           onError={(e) => {

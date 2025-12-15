@@ -9,6 +9,7 @@ import { Modal } from 'antd';
 import { Header } from '@/components/layout/Header';
 import { useCart } from '@/hooks/useCart';
 import { toast } from '@/lib/toast';
+import { normalizeImageUrl } from '@/utils/imageUrl';
 
 export default function CartPage() {
   const router = useRouter();
@@ -136,11 +137,12 @@ export default function CartPage() {
                       >
                         {item.thumbnail_url ? (
                           <Image
-                            src={item.thumbnail_url}
+                            src={normalizeImageUrl(item.thumbnail_url)}
                             alt={item.title}
                             fill
                             className="object-cover rounded"
                             sizes="128px"
+                            unoptimized
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
