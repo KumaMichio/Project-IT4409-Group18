@@ -43,6 +43,7 @@ Dự án này nhằm phát triển một nền tảng khóa học trực tuyến
 ### Back-end:
 - **Node.js (Express.js)** để phát triển phía máy chủ và quản lý API.
 - **REST API** để giao tiếp giữa client và server.
+- **SOCKET.IO** dùng để tạo real-time communication
 
 ### Cơ Sở Dữ Liệu:
 - **PostgreSQL** để lưu trữ dữ liệu người dùng và khóa học.
@@ -74,6 +75,7 @@ Dự án này nhằm phát triển một nền tảng khóa học trực tuyến
 - **Xem nội dung khóa học**: Xem video, đọc tài liệu, hoàn thành quiz.
 - **Gửi phản hồi**: Đánh giá khóa học và giảng viên.
 - **Chat**: Tham gia chat nhóm khóa học hoặc 1-1 với giảng viên.
+- **Chat với AI**: đặt các câu hỏi thắc mắc cho AI tự động trả lời
 
 ### Use Case của Giảng viên:
 - **Tạo khóa học**: Tạo mới khóa học với video, tài liệu, và mô tả.
