@@ -358,8 +358,13 @@ export default function CourseDetailPage() {
               </label>
               <input
                 type="number"
-                value={formData.price_cents}
-                onChange={(e) => setFormData({ ...formData, price_cents: parseInt(e.target.value) || 0 })}
+                value={formData.price_cents || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData({ ...formData, price_cents: value === '' ? 0 : parseInt(value) || 0 });
+                }}
+                min="0"
+                placeholder="Nhập giá khóa học"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg"
               />
             </div>

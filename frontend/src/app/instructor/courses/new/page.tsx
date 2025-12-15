@@ -504,9 +504,13 @@ export default function NewCoursePage() {
               </label>
               <input
                 type="number"
-                value={formData.price_cents}
-                onChange={(e) => setFormData({ ...formData, price_cents: parseInt(e.target.value) || 0 })}
+                value={formData.price_cents || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData({ ...formData, price_cents: value === '' ? 0 : parseInt(value) || 0 });
+                }}
                 min="0"
+                placeholder="Nhập giá khóa học"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
@@ -562,7 +566,7 @@ export default function NewCoursePage() {
             <div className="space-y-2 text-sm">
               <p><strong>Tiêu đề:</strong> {formData.title}</p>
               {formData.description && <p><strong>Mô tả:</strong> {formData.description}</p>}
-              <p><strong>Giá:</strong> {formData.price_cents === 0 ? 'Miễn phí' : `${(formData.price_cents / 100).toLocaleString('vi-VN')} ${formData.currency}`}</p>
+              <p><strong>Giá:</strong> {formData.price_cents === 0 ? 'Miễn phí' : `${formData.price_cents.toLocaleString('vi-VN')} ${formData.currency}`}</p>
             </div>
             <button
               onClick={() => setStep('info')}

@@ -35,8 +35,30 @@ async function getInstructorRevenue(req, res, next) {
   }
 }
 
+async function getAdminRevenueByDate(req, res, next) {
+  try {
+    const { from, to, groupBy = 'day' } = req.query;
+    const result = await revenueService.getAdminRevenueByDate(from, to, groupBy);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getAdminRevenueByTag(req, res, next) {
+  try {
+    const { from, to } = req.query;
+    const result = await revenueService.getAdminRevenueByTag(from, to);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getAdminSummary,
   getAdminByCourse,
   getInstructorRevenue,
+  getAdminRevenueByDate,
+  getAdminRevenueByTag,
 };

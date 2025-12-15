@@ -18,6 +18,20 @@ router.get(
   revenueController.getAdminByCourse
 );
 
+router.get(
+  '/admin/by-date',
+  authMiddleware,
+  requireRole('ADMIN'),
+  revenueController.getAdminRevenueByDate
+);
+
+router.get(
+  '/admin/by-tag',
+  authMiddleware,
+  requireRole('ADMIN'),
+  revenueController.getAdminRevenueByTag
+);
+
 // Instructor routes
 router.get(
   '/instructor/my-courses',

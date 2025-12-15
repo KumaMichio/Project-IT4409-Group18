@@ -20,6 +20,18 @@ async function getAdminRevenueSummary(from, to) {
   return { ...summary, from: range.from, to: range.to };
 }
 
+async function getAdminRevenueByDate(from, to, groupBy = 'day') {
+  const range = normalizeDateRange(from, to);
+  const data = await revenueModel.getRevenueByDate(range.from, range.to, groupBy);
+  return { from: range.from, to: range.to, data };
+}
+
+async function getAdminRevenueByTag(from, to) {
+  const range = normalizeDateRange(from, to);
+  const result = await revenueModel.getRevenueByTag(range.from, range.to);
+  return { from: range.from, to: range.to, data: result };
+}
+
 async function getAdminRevenueByCourse(from, to) {
   const range = normalizeDateRange(from, to);
   const result = await revenueModel.getRevenueByCourse(range.from, range.to);
@@ -62,4 +74,6 @@ module.exports = {
   getAdminRevenueSummary,
   getAdminRevenueByCourse,
   getInstructorRevenue,
+  getAdminRevenueByDate,
+  getAdminRevenueByTag,
 };

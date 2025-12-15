@@ -142,7 +142,7 @@ export default function InstructorCoursesPage() {
                     {course.is_published ? 'Đã xuất bản' : 'Bản nháp'}
                   </span>
                   <span className="text-sm font-semibold text-gray-900">
-                    {course.price_cents === 0 ? 'Miễn phí' : `${(course.price_cents / 100).toLocaleString('vi-VN')} ${course.currency}`}
+                    {course.price_cents === 0 ? 'Miễn phí' : `${course.price_cents.toLocaleString('vi-VN')} ${course.currency}`}
                   </span>
                 </div>
 

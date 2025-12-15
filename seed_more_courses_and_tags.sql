@@ -1,8 +1,9 @@
 -- ============================================
 -- SEED MORE COURSES, MODULES, LESSONS & TAGS
 -- ============================================
-
+SET client_encoding TO 'UTF8';
 BEGIN;
+
 
 -- ==== TAGS ====
 INSERT INTO tags (name) VALUES
