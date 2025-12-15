@@ -45,15 +45,38 @@ function createExpressApp() {
   app.use('/api/cart', cartRoutes);
   app.use('/api/payments', paymentRoutes);
   app.use('/api/enrollments', enrollmentRoutes);
+  
+  // Debug middleware for chat routes
+  app.use('/api/chat', (req, res, next) => {
+    console.log(`[APP] Chat route request: ${req.method} ${req.originalUrl}`);
+    next();
+  });
   app.use('/api/chat', chatRoutes);
+  
   app.use('/api/reviews', reviewRoutes);
   app.use('/api/profile', profileRoutes);
 
   // Health check
-  app.get('/api/health', (req, res) => {
+  app.get('/api/health', async (req, res) => {
+    const { testConnection } = require('./config/db');
+    const dbStatus = await testConnection();
+    
     res.json({
       status: 'OK',
-      message: 'LMS Backend is running'
+      message: 'LMS Backend is running',
+      database: dbStatus ? 'connected' : 'disconnected',
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // 404 handler for unmatched routes
+  app.use('/api/*', (req, res, next) => {
+    console.log('⚠️  [APP] 404 - Route not found:', req.method, req.originalUrl);
+    res.status(404).json({
+      error: 'Endpoint not found',
+      method: req.method,
+      path: req.originalUrl,
+      message: 'The requested API endpoint does not exist'
     });
   });
 

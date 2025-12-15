@@ -3,7 +3,50 @@ const router = express.Router();
 const { authRequired } = require('../middlewares/auth.middleware');
 const chatController = require('../controllers/chat.controller');
 
-// All chat routes require authentication
+// Debug middleware to log all requests to chat routes
+router.use((req, res, next) => {
+  console.log(`[CHAT ROUTER] ${req.method} ${req.originalUrl || req.url}`, {
+    path: req.path,
+    baseUrl: req.baseUrl,
+    originalUrl: req.originalUrl
+  });
+  next();
+});
+
+// ===== BOT CHAT ROUTES (Move to top to avoid route conflicts) =====
+// These routes are defined first to ensure they match before parameterized routes
+
+// Test route to verify routing works (no auth required for testing)
+router.get('/bot/test', (req, res) => {
+  console.log('✅ GET /api/chat/bot/test - Route test successful');
+  res.json({ 
+    message: 'Bot route is working', 
+    path: '/api/chat/bot/test',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Get bot chat messages
+router.get('/bot/messages', authRequired, (req, res, next) => {
+  console.log('✅ GET /api/chat/bot/messages - Request received', {
+    user: req.user ? { id: req.user.id } : 'no user',
+    query: req.query
+  });
+  chatController.getBotMessages(req, res, next);
+});
+
+// Send message to bot
+router.post('/bot/messages', authRequired, (req, res, next) => {
+  console.log('✅ POST /api/chat/bot/messages - Request received', { 
+    hasBody: !!req.body,
+    bodyKeys: req.body ? Object.keys(req.body) : [],
+    user: req.user ? { id: req.user.id } : 'no user',
+    hasAuth: !!req.headers.authorization
+  });
+  chatController.sendBotMessage(req, res, next);
+});
+
+// All other chat routes require authentication
 router.use(authRequired);
 
 // ===== COURSE CHANNEL ROUTES (UC13) =====

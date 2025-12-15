@@ -185,6 +185,47 @@ async function getUnreadDMCount(userId) {
   return { unreadCount: count };
 }
 
+// ===== BOT CHAT =====
+
+/**
+ * Get bot chat messages (không lưu lịch sử, trả về empty)
+ */
+async function getBotMessages(userId, limit = 50, beforeId = null) {
+  // Không lưu lịch sử, trả về empty
+  return { messages: [] };
+}
+
+/**
+ * Send message to bot and get AI response (không lưu vào database)
+ */
+async function sendBotMessage(userId, content, conversationHistory = []) {
+  if (!content || content.trim().length === 0) {
+    throw new AppError(400, 'Nội dung tin nhắn không được để trống', 'INVALID_INPUT');
+  }
+
+  // Get AI response (không lưu conversation history vào database)
+  const aiService = require('./ai.service');
+  let botResponse;
+  try {
+    botResponse = await aiService.getAIResponse(userId, content, conversationHistory);
+  } catch (error) {
+    // Fallback nếu AI service lỗi
+    botResponse = 'Xin lỗi, tôi đang gặp sự cố kỹ thuật. Vui lòng thử lại sau hoặc liên hệ với giảng viên.';
+    console.error('AI service error:', error.message);
+  }
+
+  // Trả về response mà không lưu vào database
+  return {
+    message: {
+      id: Date.now(), // Temporary ID
+      user_id: userId,
+      role: 'bot',
+      content: botResponse,
+      created_at: new Date().toISOString(),
+    },
+  };
+}
+
 module.exports = {
   // Course channel
   getCourseChannel,
@@ -198,5 +239,8 @@ module.exports = {
   sendDMMessage,
   getUserDMThreads,
   getUnreadDMCount,
+  // Bot chat
+  getBotMessages,
+  sendBotMessage,
 };
 
